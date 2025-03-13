@@ -50,6 +50,15 @@ class Authentication {
     }
 
     /**
+     * Get whether to verify SSL certificates
+     * 
+     * @return bool Returns true if SSL certificates are verified, false otherwise
+     */
+    public function getVerifySSL(): bool {
+        return $this->verifySSL;
+    }
+
+    /**
      * Authenticate with the M-Pesa API and get an access token
      * 
      * @return self Returns the current instance for method chaining

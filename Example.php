@@ -8,11 +8,9 @@ use MesaSDK\PhpMpesa\Config;
 // Create configuration with your credentials
 $config = new Config();
 
-
 $config->setEnvironment('sandbox')
-        ->setBaseUrl("https://apisandbox.safaricom.et")
         ->setConsumerKey("7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi")
-        ->ConsumerSecret("zEvvR7yTpNYG1DoH31MKOYOzh0iZ9kdXAK1andjjrqXdnJMTbiUMhnnz5Qf12oNC");
+        ->setConsumerSecret("zEvvR7yTpNYG1DoH31MKOYOzh0iZ9kdXAK1andjjrqXdnJMTbiUMhnnz5Qf12oNC");
 
 try {
     // Initialize authentication

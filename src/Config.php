@@ -11,19 +11,20 @@ use Dotenv\Dotenv;
  * 
  * @package MesaSDK\PhpMpesa
  */
-class Config {
+class Config
+{
     /** @var string Base URL for the M-Pesa API endpoints */
     private string $base_url;
-    
+
     /** @var string Consumer Key obtained from the M-Pesa Developer Portal */
     private string $consumer_key;
-    
+
     /** @var string Consumer Secret obtained from the M-Pesa Developer Portal */
     private string $consumer_secret;
-    
+
     /** @var string Passkey for generating transaction passwords */
     private string $passkey;
-    
+
     /** @var string Business Shortcode/Till Number/Paybill Number */
     private string $shortcode;
 
@@ -77,10 +78,11 @@ class Config {
      * @param string|null ...$params Configuration parameters to check
      * @return bool True if should load from env, false otherwise
      */
-    private function shouldLoadFromEnv(?string ...$params): bool {
+    private function shouldLoadFromEnv(?string ...$params): bool
+    {
         // Check if all parameters are null and .env file exists
-        return empty(array_filter($params, fn($param) => $param !== null)) && 
-        file_exists(getcwd() . '/.env');
+        return empty(array_filter($params, fn($param) => $param !== null)) &&
+            file_exists(getcwd() . '/.env');
     }
 
     /**
@@ -88,7 +90,8 @@ class Config {
      * 
      * @return void
      */
-    private function loadFromEnv(): void {
+    private function loadFromEnv(): void
+    {
         try {
             $dotenv = Dotenv::createImmutable(getcwd());
             $dotenv->safeLoad();
@@ -118,7 +121,8 @@ class Config {
      * 
      * @return string The configured base URL
      */
-    public function getBaseUrl(): string {
+    public function getBaseUrl(): string
+    {
         return $this->base_url;
     }
 
@@ -128,7 +132,8 @@ class Config {
      * @param string $base_url The new base URL to set
      * @return self Returns the current instance for method chaining
      */
-    public function setBaseUrl(string $base_url): self {
+    public function setBaseUrl(string $base_url): self
+    {
         $this->base_url = $base_url;
         return $this;
     }
@@ -138,7 +143,8 @@ class Config {
      * 
      * @return string The configured consumer key
      */
-    public function getConsumerKey(): string {
+    public function getConsumerKey(): string
+    {
         return $this->consumer_key;
     }
 
@@ -148,7 +154,8 @@ class Config {
      * @param string $consumer_key The new consumer key to set
      * @return self Returns the current instance for method chaining
      */
-    public function setConsumerKey(string $consumer_key): self {
+    public function setConsumerKey(string $consumer_key): self
+    {
         $this->consumer_key = $consumer_key;
         return $this;
     }
@@ -158,7 +165,8 @@ class Config {
      * 
      * @return string The configured consumer secret
      */
-    public function getConsumerSecret(): string {
+    public function getConsumerSecret(): string
+    {
         return $this->consumer_secret;
     }
 
@@ -168,7 +176,8 @@ class Config {
      * @param string $consumer_secret The new consumer secret to set
      * @return self Returns the current instance for method chaining
      */
-    public function setConsumerSecret(string $consumer_secret): self {
+    public function setConsumerSecret(string $consumer_secret): self
+    {
         $this->consumer_secret = $consumer_secret;
         return $this;
     }
@@ -178,7 +187,8 @@ class Config {
      * 
      * @return string The configured passkey
      */
-    public function getPasskey(): string {
+    public function getPasskey(): string
+    {
         return $this->passkey;
     }
 
@@ -188,7 +198,8 @@ class Config {
      * @param string $passkey The new passkey to set
      * @return self Returns the current instance for method chaining
      */
-    public function setPasskey(string $passkey): self {
+    public function setPasskey(string $passkey): self
+    {
         $this->passkey = $passkey;
         return $this;
     }
@@ -198,7 +209,8 @@ class Config {
      * 
      * @return string The configured shortcode
      */
-    public function getShortcode(): string {
+    public function getShortcode(): string
+    {
         return $this->shortcode;
     }
 
@@ -208,7 +220,8 @@ class Config {
      * @param string $shortcode The new shortcode to set
      * @return self Returns the current instance for method chaining
      */
-    public function setShortcode(string $shortcode): self {
+    public function setShortcode(string $shortcode): self
+    {
         $this->shortcode = $shortcode;
         return $this;
     }
@@ -218,7 +231,8 @@ class Config {
      * 
      * @return string The current environment ('sandbox' or 'production')
      */
-    public function getEnvironment(): string {
+    public function getEnvironment(): string
+    {
         return $this->environment;
     }
 
@@ -229,21 +243,22 @@ class Config {
      * @return self Returns the current instance for method chaining
      * @throws \InvalidArgumentException If an invalid environment type is provided
      */
-    public function setEnvironment(string $environment): self {
+    public function setEnvironment(string $environment): self
+    {
         $environment = strtolower($environment);
         if (!in_array($environment, ['sandbox', 'production'])) {
             throw new \InvalidArgumentException("Environment must be either 'sandbox' or 'production'");
         }
-        
+
         $this->environment = $environment;
-        
+
         // Update base URL based on environment
         if ($environment === 'production') {
-            $this->base_url = "https://apisandbox.safaricom.et";
+            $this->base_url = "https://apis.safaricom.et";
         } else {
             $this->base_url = "https://apisandbox.safaricom.et";
         }
-        
+
         return $this;
     }
 
@@ -254,13 +269,14 @@ class Config {
      * @param mixed $default The default value if the key is not found
      * @return mixed The configuration value or default if not found
      */
-    public function get(string $key, $default = null) {
+    public function get(string $key, $default = null)
+    {
         // Add MPESA_ prefix if not present
         $envKey = !str_starts_with($key, 'MPESA_') ? 'MPESA_' . $key : $key;
-        
+
         // First try environment variables
         $value = $_ENV[$envKey] ?? $_SERVER[$envKey] ?? null;
-        
+
         // If not found in environment, try internal state
         if ($value === null) {
             // Map environment keys to property names
@@ -272,16 +288,16 @@ class Config {
                 'MPESA_PASSKEY' => 'passkey',
                 'MPESA_SHORTCODE' => 'shortcode'
             ];
-            
+
             // Convert environment key to property name
             $property = $propertyMap[$envKey] ?? strtolower(str_replace('MPESA_', '', $envKey));
-            
+
             // Get value from property if it exists
             if (property_exists($this, $property)) {
                 $value = $this->$property;
             }
         }
-        
+
         return $value ?? $default;
     }
 }

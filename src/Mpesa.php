@@ -1,9 +1,9 @@
 <?php
 namespace MesaSDK\PhpMpesa;
 
-
 use GuzzleHttp\Client;
-
+use MesaSDK\PhpMpesa\Traits\STKPushTrait;
+use MesaSDK\PhpMpesa\Base\BaseMpesa;
 /**
  * Class Mpesa
  * 
@@ -12,27 +12,15 @@ use GuzzleHttp\Client;
  * 
  * @package MpesaSDK
  */
-class Mpesa {
-    /** @var Authentication The authentication instance */
-    private Authentication $auth;
+class Mpesa extends BaseMpesa
+{
 
-    /** @var Config The configuration instance */
-    private Config $config;
+    use STKPushTrait;
+
+    private ?STKPushTrait $stkPushService = null;
 
     /** @var string Customer's phone number */
-    private string $phoneNumber = '';
-
-    /** @var float Transaction amount */
-    private float $amount = 0.0;
-
-    /** @var string Callback URL for transaction results */
-    private string $callbackUrl = '';
-
-    /** @var string Description of the transaction */
-    private string $transactionDesc = "Payment";
-
-    /** @var string Reference for the transaction */
-    private string $accountReference = "123456";
+    protected string $phoneNumber = '';
 
     /**
      * Mpesa constructor.
@@ -40,7 +28,8 @@ class Mpesa {
      * @param Config|array|null $config Optional configuration instance or array of config values
      * @throws \InvalidArgumentException When invalid configuration is provided
      */
-    public function __construct(Config|array|null $config = null) {
+    public function __construct($config = null)
+    {
         if ($config instanceof Config) {
             $this->config = $config;
         } elseif (is_array($config)) {
@@ -48,7 +37,7 @@ class Mpesa {
         } else {
             $this->config = new Config();
         }
-        
+
         $this->auth = new Authentication($this->config);
     }
 
@@ -58,15 +47,26 @@ class Mpesa {
      * @param array $config Configuration values
      * @return Config
      */
-    private function createConfigFromArray(array $config): Config {
+    protected function createConfigFromArray(array $config): Config
+    {
         return new Config(
-            base_url: $config['base_url'] ?? null,
-            consumer_key: $config['consumer_key'] ?? null,
-            consumer_secret: $config['consumer_secret'] ?? null,
-            passkey: $config['passkey'] ?? null,
-            shortcode: $config['shortcode'] ?? null,
-            environment: $config['environment'] ?? null
+            $config['base_url'] ?? null,
+            $config['consumer_key'] ?? null,
+            $config['consumer_secret'] ?? null,
+            $config['passkey'] ?? null,
+            $config['shortcode'] ?? null,
+            $config['environment'] ?? null
         );
+    }
+
+    /**
+     * Get the STK Push service instance
+     * 
+     * @return STKPushTrait
+     */
+    public function stkPush(): STKPushTrait
+    {
+        return $this->stkPushService;
     }
 
     /**
@@ -75,9 +75,11 @@ class Mpesa {
      * @param array $config Configuration values
      * @return self Returns the current instance for method chaining
      */
-    public function configure(array $config): self {
+    public function configure(array $config): self
+    {
         $this->config = $this->createConfigFromArray($config);
         $this->auth = new Authentication($this->config);
+        $this->stkPushService = null; // Reset service instances
         return $this;
     }
 
@@ -87,8 +89,16 @@ class Mpesa {
      * @return self Returns the current instance for method chaining
      * @throws \RuntimeException When authentication fails
      */
-    public function authenticate(): self {
-        $this->auth->authenticate();
+    public function authenticate(): self
+    {
+        try {
+            $this->auth->authenticate();
+        } catch (\Exception $e) {
+            $this->response = [
+                'errorMessage' => $e->getMessage()
+            ];
+            throw new \RuntimeException('Authentication failed: ' . $e->getMessage(), 0, $e);
+        }
         return $this;
     }
 
@@ -99,7 +109,8 @@ class Mpesa {
      * @return self Returns the current instance for method chaining
      * @throws \InvalidArgumentException If phone number format is invalid
      */
-    public function setPhoneNumber(string $phone): self {
+    public function setPhoneNumber(string $phone): self
+    {
         // Basic validation for Kenyan phone numbers
         if (!preg_match('/^251[17]\d{8}$/', $phone)) {
             throw new \InvalidArgumentException('Phone number must be in the format 251XXXXXXXXX');
@@ -115,7 +126,8 @@ class Mpesa {
      * @return self Returns the current instance for method chaining
      * @throws \InvalidArgumentException If amount is not positive
      */
-    public function setAmount(float $amount): self {
+    public function setAmount(float $amount): self
+    {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('Amount must be greater than 0');
         }
@@ -130,8 +142,9 @@ class Mpesa {
      * @return self Returns the current instance for method chaining
      * @throws \InvalidArgumentException If URL is invalid or not HTTPS
      */
-    public function setCallbackUrl(string $url): self {
-        if (!filter_var($url, FILTER_VALIDATE_URL) || !str_starts_with($url, 'https://')) {
+    public function setCallbackUrl(string $url): self
+    {
+        if (!filter_var($url, FILTER_VALIDATE_URL) || strpos($url, 'https://') !== 0) {
             throw new \InvalidArgumentException('Callback URL must be a valid HTTPS URL');
         }
         $this->callbackUrl = $url;
@@ -144,7 +157,8 @@ class Mpesa {
      * @param string $desc Description of the transaction
      * @return self Returns the current instance for method chaining
      */
-    public function setTransactionDesc(string $desc): self {
+    public function setTransactionDesc(string $desc): self
+    {
         $this->transactionDesc = $desc;
         return $this;
     }
@@ -155,7 +169,8 @@ class Mpesa {
      * @param string $reference Reference for the transaction
      * @return self Returns the current instance for method chaining
      */
-    public function setAccountReference(string $reference): self {
+    public function setAccountReference(string $reference): self
+    {
         $this->accountReference = $reference;
         return $this;
     }
@@ -166,85 +181,45 @@ class Mpesa {
      * @param bool $verify SSL verification flag
      * @return self Returns the current instance for method chaining
      */
-    public function setVerifySSL(bool $verify): self {
+    public function setVerifySSL(bool $verify): self
+    {
         $this->auth->setVerifySSL($verify);
         return $this;
     }
 
+
     /**
-     * Initiate an STK Push request
+     * Get the SSL verification flag
      * 
-     * @return array The API response
-     * @throws \RuntimeException When the request fails or required fields are missing
+     * @return bool Returns true if SSL certificates are verified, false otherwise
      */
-    public function initiateSTKPush(): array {
-        $this->validateRequiredFields();
-
-        try {
-            $timestamp = date('YmdHis');
-            $password = $this->generatePassword($timestamp);
-
-            $client = new Client();
-            $response = $client->request('POST', 
-                $this->config->getBaseUrl() . "/mpesa/stkpush/v1/processrequest",
-                [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $this->auth->getToken(),
-                        'Content-Type' => 'application/json'
-                    ],
-                    'json' => [
-                        "BusinessShortCode" => $this->config->getShortcode(),
-                        "Password" => $password,
-                        "Timestamp" => $timestamp,
-                        "TransactionType" => "CustomerPayBillOnline",
-                        "Amount" => $this->amount,
-                        "PartyA" => $this->phoneNumber,
-                        "PartyB" => $this->config->getShortcode(),
-                        "PhoneNumber" => $this->phoneNumber,
-                        "CallBackURL" => $this->callbackUrl,
-                        "AccountReference" => $this->accountReference,
-                        "TransactionDesc" => $this->transactionDesc
-                    ]
-                ]
-            );
-
-            return json_decode($response->getBody(), true);
-        } catch (\Exception $e) {
-            throw new \RuntimeException('STK Push request failed: ' . $e->getMessage(), 0, $e);
-        }
+    public function getVerifySSL(): self
+    {
+        $this->auth->getVerifySSL();
+        return $this;
     }
 
-    /**
-     * Generate the password for the STK Push request
-     * 
-     * @param string $timestamp Current timestamp in YmdHis format
-     * @return string Base64 encoded password
-     */
-    private function generatePassword(string $timestamp): string {
-        return base64_encode(
-            $this->config->getShortcode() . 
-            $this->config->getPasskey() . 
-            $timestamp
-        );
-    }
 
     /**
-     * Validate that all required fields are set before making a request
+     * Set the business shortcode
      * 
-     * @throws \RuntimeException If any required field is missing
+     * @param string $shortcode The business shortcode to set
+     * @return self Returns the current instance for method chaining
      */
-    private function validateRequiredFields(): void {
-        if (empty($this->phoneNumber)) {
-            throw new \RuntimeException('Phone number is required');
-        }
-        if ($this->amount <= 0) {
-            throw new \RuntimeException('Amount must be set and greater than 0');
-        }
-        if (empty($this->callbackUrl)) {
-            throw new \RuntimeException('Callback URL is required');
-        }
-        if (!$this->auth->hasToken()) {
-            throw new \RuntimeException('Authentication token is required. Call authenticate() first');
-        }
+    public function setShortcode(string $shortcode): self
+    {
+        $this->config->setShortcode($shortcode);
+        return $this;
+    }
+
+
+    /**
+     * Get the business shortcode
+     * 
+     * @return string The configured shortcode
+     */
+    public function getShortcode(): string
+    {
+        return $this->config->getShortcode();
     }
 }
