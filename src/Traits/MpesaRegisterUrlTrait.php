@@ -1,24 +1,10 @@
 <?php
+namespace MesaSDK\PhpMpesa\Traits;
 
-class MpesaRegisterUrl
+trait MpesaRegisterUrlTrait
 {
     private string $apiEndpoint;
-    private string $apiKey;
-    private array $config;
     private ?string $lastError = null;
-
-    /**
-     * MpesaRegisterUrl constructor.
-     * @param string $apiKey The API key for authentication
-     * @param string $environment 'sandbox' or 'production'
-     */
-    public function __construct(string $apiKey, string $environment = 'sandbox')
-    {
-        $this->apiKey = $apiKey;
-        $this->apiEndpoint = $environment === 'sandbox' 
-            ? 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl'
-            : 'https://api.safaricom.co.ke/mpesa/c2b/v1/registerurl';
-    }
 
     /**
      * Register URLs for validation and confirmation
@@ -71,14 +57,18 @@ class MpesaRegisterUrl
         }
 
         // Validate URLs
-        if (!filter_var($confirmationUrl, FILTER_VALIDATE_URL) || 
-            !str_starts_with($confirmationUrl, 'https://')) {
+        if (
+            !filter_var($confirmationUrl, FILTER_VALIDATE_URL) ||
+            !str_starts_with($confirmationUrl, 'https://')
+        ) {
             $this->lastError = 'Invalid confirmation URL - must be HTTPS';
             return false;
         }
 
-        if (!filter_var($validationUrl, FILTER_VALIDATE_URL) || 
-            !str_starts_with($validationUrl, 'https://')) {
+        if (
+            !filter_var($validationUrl, FILTER_VALIDATE_URL) ||
+            !str_starts_with($validationUrl, 'https://')
+        ) {
             $this->lastError = 'Invalid validation URL - must be HTTPS';
             return false;
         }
@@ -115,9 +105,9 @@ class MpesaRegisterUrl
         }
 
         curl_close($ch);
-        
+
         $decodedResponse = json_decode($response, true);
-        
+
         if ($httpCode !== 200 || !$decodedResponse) {
             $this->lastError = 'API request failed: ' . ($decodedResponse['errorMessage'] ?? 'Unknown error');
             return false;
@@ -133,4 +123,4 @@ class MpesaRegisterUrl
     {
         return $this->lastError;
     }
-} 
+}

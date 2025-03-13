@@ -13,11 +13,15 @@ This is a PHP SDK for integrating with Safaricom's M-Pesa API using a fluent app
 - Flexible configuration options
 - Multiple configuration methods
 - Professional namespace structure
+- C2B (Customer to Business) Integration
+- URL Registration Support
+- Authentication Management
+- Robust Exception Handling
 
 ## Installation
 
 ```sh
-composer require your-vendor/mpesa-sdk
+composer require mesele/mpesa-sdk
 ```
 
 ## Namespace
@@ -127,9 +131,79 @@ All configuration methods accept the following parameters:
 - `shortcode`: Your business Shortcode, Till Number, or Paybill Number
 - `base_url`: (Optional) Custom base URL if needed
 
-## Usage Example
+## Usage Examples
 
-### Basic STK Push
+### 1. C2B Integration
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+
+$mpesa = new Mpesa([/* your config */]);
+
+// Register C2B URLs
+$response = $mpesa->registerUrls([
+    'ValidationURL' => 'https://example.com/validation',
+    'ConfirmationURL' => 'https://example.com/confirmation',
+    'ResponseType' => 'Completed'
+]);
+
+// Process C2B transaction
+$result = $mpesa->c2b([
+    'ShortCode' => 'YOUR_SHORTCODE',
+    'CommandID' => 'CustomerPayBillOnline',
+    'Amount' => '100',
+    'Msisdn' => '254712345678',
+    'BillRefNumber' => 'INV001'
+]);
+```
+
+### 2. Authentication
+
+```php
+use MesaSDK\PhpMpesa\Authentication;
+
+$auth = new Authentication($config);
+$token = $auth->generateToken();
+```
+
+### 3. STK Push
+
+```php
+$response = $mpesa->stkPush([
+    'Amount' => 1,
+    'PartyA' => '254712345678',
+    'PartyB' => 'YOUR_SHORTCODE',
+    'PhoneNumber' => '254712345678',
+    'CallBackURL' => 'https://example.com/callback',
+    'AccountReference' => 'CompanyXLTD',
+    'TransactionDesc' => 'Payment of X'
+]);
+```
+
+## Error Handling
+
+The SDK includes comprehensive error handling:
+
+```php
+try {
+    $result = $mpesa->c2b([/* params */]);
+} catch (MpesaException $e) {
+    // Handle M-Pesa specific errors
+    echo $e->getMessage();
+    echo $e->getCode();
+} catch (\Exception $e) {
+    // Handle general errors
+    echo $e->getMessage();
+}
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ```
 

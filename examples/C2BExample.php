@@ -1,7 +1,5 @@
 <?php
-
-require_once __DIR__ . '/vendor/autoload.php';
-
+require_once __DIR__ . '/../vendor/autoload.php';
 use MesaSDK\PhpMpesa\Config;
 use MesaSDK\PhpMpesa\Mpesa;
 
