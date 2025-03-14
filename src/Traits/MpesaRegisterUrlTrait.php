@@ -1,10 +1,44 @@
 <?php
 namespace MesaSDK\PhpMpesa\Traits;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
+use MesaSDK\PhpMpesa\Responses\MpesaResponse;
+
 trait MpesaRegisterUrlTrait
 {
-    private string $apiEndpoint;
+    private string $apiEndpoint = "https://apisandbox.safaricom.et/v1/c2b-register-url/register";
     private ?string $lastError = null;
+    private ?string $apiKey = null;
+
+
+    /**
+     * Set the API key for authentication
+     * @param string $apiKey The API key to use for authentication
+     * @return void
+     */
+    public function setApiKey(string $apiKey): void
+    {
+        $this->apiKey = $apiKey;
+    }
+
+    /**
+     * Get the current API key
+     * @return string|null The current API key or null if not set
+     */
+    public function getApiKey(): ?string
+    {
+        return $this->apiKey;
+    }
+
+    /**
+     * Check if API key is set
+     * @return bool True if API key is set, false otherwise
+     */
+    private function hasApiKey(): bool
+    {
+        return !empty($this->apiKey);
+    }
 
     /**
      * Register URLs for validation and confirmation
@@ -12,22 +46,25 @@ trait MpesaRegisterUrlTrait
      * @param string $responseType The response type (Completed/Cancelled)
      * @param string $confirmationUrl The confirmation URL (must be HTTPS)
      * @param string $validationUrl The validation URL (must be HTTPS)
-     * @return array|false Response array on success, false on failure
+     * @param string $commandId The command ID (default: RegisterURL)
+     * @return MpesaResponse Response object containing response details
      */
     public function register(
         string $shortCode,
         string $responseType,
         string $confirmationUrl,
-        string $validationUrl
-    ) {
+        string $validationUrl,
+        string $commandId = 'RegisterURL'
+    ): MpesaResponse {
         // Validate input parameters
         if (!$this->validateInputs($shortCode, $responseType, $confirmationUrl, $validationUrl)) {
-            return false;
+            return MpesaResponse::error($this->lastError);
         }
 
         $payload = [
             'ShortCode' => $shortCode,
             'ResponseType' => $responseType,
+            'CommandID' => $commandId,
             'ConfirmationURL' => $confirmationUrl,
             'ValidationURL' => $validationUrl
         ];
@@ -59,7 +96,7 @@ trait MpesaRegisterUrlTrait
         // Validate URLs
         if (
             !filter_var($confirmationUrl, FILTER_VALIDATE_URL) ||
-            !str_starts_with($confirmationUrl, 'https://')
+            strpos($confirmationUrl, 'https://') !== 0
         ) {
             $this->lastError = 'Invalid confirmation URL - must be HTTPS';
             return false;
@@ -67,7 +104,7 @@ trait MpesaRegisterUrlTrait
 
         if (
             !filter_var($validationUrl, FILTER_VALIDATE_URL) ||
-            !str_starts_with($validationUrl, 'https://')
+            strpos($validationUrl, 'https://') !== 0
         ) {
             $this->lastError = 'Invalid validation URL - must be HTTPS';
             return false;
@@ -78,42 +115,36 @@ trait MpesaRegisterUrlTrait
 
     /**
      * Make the HTTP request to the M-PESA API
+     * @return MpesaResponse
      */
-    private function makeRequest(array $payload): array|false
+    private function makeRequest(array $payload): MpesaResponse
     {
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $this->apiEndpoint,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $this->apiKey,
-                'Content-Type: application/json'
-            ],
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if ($response === false) {
-            $this->lastError = curl_error($ch);
-            curl_close($ch);
-            return false;
+        if (!$this->hasApiKey()) {
+            return MpesaResponse::error('API key not set');
         }
 
-        curl_close($ch);
+        try {
+            // Append apikey as query parameter to the endpoint
+            $endpoint = $this->apiEndpoint;
+            $endpoint .= (strpos($endpoint, '?') === false ? '?' : '&') . 'apikey=' . urlencode($this->apiKey);
 
-        $decodedResponse = json_decode($response, true);
+            $response = $this->client->post($endpoint, [
+                'json' => $payload,
+                'headers' => [
+                    'Content-Type' => 'application/json'
+                ]
+            ]);
 
-        if ($httpCode !== 200 || !$decodedResponse) {
-            $this->lastError = 'API request failed: ' . ($decodedResponse['errorMessage'] ?? 'Unknown error');
-            return false;
+            $decodedResponse = json_decode($response->getBody(), true);
+            if (!$decodedResponse) {
+                return MpesaResponse::error('Failed to decode API response');
+            }
+
+            return new MpesaResponse($decodedResponse);
+
+        } catch (GuzzleException $e) {
+            return MpesaResponse::error($e->getMessage());
         }
-
-        return $decodedResponse;
     }
 
     /**

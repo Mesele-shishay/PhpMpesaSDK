@@ -2,7 +2,6 @@
 
 namespace MesaSDK\PhpMpesa\Traits;
 
-use GuzzleHttp\Client;
 use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 use MesaSDK\PhpMpesa\Contracts\MpesaInterface;
 
@@ -30,7 +29,6 @@ trait STKPushTrait
             $shortcode = $this->config->getShortcode();
             $password = $this->testPassword ?? base64_encode(hash('sha256', $shortcode . $this->config->getPasskey() . $timestamp));
 
-            $client = new Client(['verify' => $this->auth->getVerifySSL()]);
             $payload = [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->auth->getToken(),
@@ -57,7 +55,7 @@ trait STKPushTrait
                 ]
             ];
 
-            $response = $client->request(
+            $response = $this->client->request(
                 'POST',
                 $this->config->getBaseUrl() . "/mpesa/stkpush/v3/processrequest",
                 $payload

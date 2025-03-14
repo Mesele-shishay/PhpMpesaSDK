@@ -2,6 +2,7 @@
 namespace MesaSDK\PhpMpesa;
 
 use GuzzleHttp\Client;
+use MesaSDK\PhpMpesa\Traits\MpesaRegisterUrlTrait;
 use MesaSDK\PhpMpesa\Traits\STKPushTrait;
 use MesaSDK\PhpMpesa\Base\BaseMpesa;
 /**
@@ -15,8 +16,9 @@ use MesaSDK\PhpMpesa\Base\BaseMpesa;
 class Mpesa extends BaseMpesa
 {
 
-    use STKPushTrait;
+    use STKPushTrait, MpesaRegisterUrlTrait;
 
+    private Client $client;
     private ?STKPushTrait $stkPushService = null;
 
     /** @var string Customer's phone number */
@@ -38,7 +40,11 @@ class Mpesa extends BaseMpesa
             $this->config = new Config();
         }
 
-        $this->auth = new Authentication($this->config);
+
+        $this->client = new Client(['verify' => $this->config->getVerifySSL()]);
+
+        $this->auth = new Authentication($this->config, $this->config->getVerifySSL());
+
     }
 
     /**

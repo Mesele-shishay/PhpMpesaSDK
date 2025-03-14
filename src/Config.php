@@ -31,6 +31,10 @@ class Config
     /** @var string Environment type ('sandbox' or 'production') */
     private string $environment;
 
+
+    /** @var bool Whether to verify SSL certificates */
+    private bool $verify_ssl;
+
     /**
      * Config constructor.
      * 
@@ -57,7 +61,8 @@ class Config
         ?string $consumer_secret = null,
         ?string $passkey = null,
         ?string $shortcode = null,
-        ?string $environment = null
+        ?string $environment = null,
+        ?bool $verify_ssl = true
     ) {
         // Try to load from .env if no parameters are provided and .env file exists
         if ($this->shouldLoadFromEnv($consumer_key, $consumer_secret, $passkey, $shortcode)) {
@@ -70,6 +75,20 @@ class Config
             $this->shortcode = $shortcode ?? "";
             $this->setEnvironment($environment ?? "sandbox");
         }
+
+        $this->verify_ssl = $environment === 'production' ? true : $verify_ssl;
+    }
+
+    public function getVerifySSL(): bool
+    {
+        return $this->verify_ssl;
+    }
+
+
+    public function setVerifySSL(bool $verify_ssl): self
+    {
+        $this->verify_ssl = $verify_ssl;
+        return $this;
     }
 
     /**

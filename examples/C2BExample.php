@@ -9,12 +9,13 @@ $config->setEnvironment('sandbox')
     ->setBaseUrl("https://apisandbox.safaricom.et")
     ->setConsumerKey("7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi")
     ->setConsumerSecret("zEvvR7yTpNYG1DoH31MKOYOzh0iZ9kdXAK1andjjrqXdnJMTbiUMhnnz5Qf12oNC")
-    ->setShortCode("1020");
+    ->setShortCode("1020")
+    ->setVerifySSL(false);
 
 try {
     // Initialize Mpesa
     $mpesa = new Mpesa($config);
-    $mpesa->setVerifySSL(false)
+    $mpesa
         ->authenticate()
         ->setPhoneNumber('251700404709')
         ->setAmount(20)
