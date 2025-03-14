@@ -1,209 +1,146 @@
-# M-Pesa SDK PHP
+# M-PESA Account Balance API Implementation
 
-This is a PHP SDK for integrating with Safaricom's M-Pesa API using a fluent approach. The SDK provides a simple and elegant way to interact with various M-Pesa services.
+This implementation provides a simple way to interact with the M-PESA Account Balance API. It allows businesses to programmatically check the balance of their M-PESA accounts in real-time.
 
 ## Features
 
-- Simple, fluent interface for M-Pesa integration
-- Automatic environment-based URL configuration
-- Comprehensive input validation
-- Proper error handling
-- Secure by default (HTTPS required for callbacks)
-- Environment variable support
-- Flexible configuration options
-- Multiple configuration methods
-- Professional namespace structure
-- C2B (Customer to Business) Integration
-- URL Registration Support
-- Authentication Management
-- Robust Exception Handling
+- Query M-PESA account balance
+- Handle asynchronous responses
+- Parse account balance results
+- Error handling
+- Type-safe implementation
+- Trait-based implementation for easy integration
+
+## Requirements
+
+- PHP 7.4 or higher
+- curl extension
+- json extension
 
 ## Installation
 
-```sh
-composer require mesele/mpesa-sdk
+1. Add this package to your project:
+
+```bash
+composer require your-vendor/mpesa-account-balance
 ```
 
-## Namespace
-
-The SDK uses the `MesaSDK\PhpMpesa` namespace:
+2. Include the autoloader in your PHP script:
 
 ```php
-use MesaSDK\PhpMpesa\Mpesa;
-use MesaSDK\PhpMpesa\Config;
+require_once 'vendor/autoload.php';
 ```
 
-## Configuration
+## Usage
 
-The SDK provides multiple ways to configure your M-Pesa integration:
-
-### 1. Direct Array Configuration
-
-The simplest way to configure the SDK is by passing an array of configuration values:
+### Basic Usage
 
 ```php
-use MesaSDK\PhpMpesa\Mpesa;
+use MPesa\MPesa;
 
-// Configure during initialization
-$mpesa = new Mpesa([
-    'environment' => 'sandbox', // or 'production'
-    'consumer_key' => 'your_consumer_key',
-    'consumer_secret' => 'your_consumer_secret',
-    'passkey' => 'your_passkey',
-    'shortcode' => 'your_shortcode'
-]);
-
-// OR configure after initialization
-$mpesa = new Mpesa();
-$mpesa->configure([
-    'environment' => 'sandbox',
-    'consumer_key' => 'your_consumer_key',
-    'consumer_secret' => 'your_consumer_secret',
-    'passkey' => 'your_passkey',
-    'shortcode' => 'your_shortcode'
-]);
-```
-
-### 2. Using Environment Variables (.env)
-
-Create a `.env` file in your project root:
-
-```env
-MPESA_ENVIRONMENT=sandbox     # or production
-MPESA_CONSUMER_KEY=your_consumer_key
-MPESA_CONSUMER_SECRET=your_consumer_secret
-MPESA_PASSKEY=your_passkey
-MPESA_SHORTCODE=your_shortcode
-```
-
-Then initialize without parameters:
-
-```php
-use MesaSDK\PhpMpesa\Mpesa;
-
-// Will automatically load from .env if file exists
-$mpesa = new Mpesa();
-```
-
-### 3. Using Config Class
-
-For more advanced configuration management:
-
-```php
-use MesaSDK\PhpMpesa\Config;
-use MesaSDK\PhpMpesa\Mpesa;
-
-$config = new Config(
-    consumer_key: "your_consumer_key",
-    consumer_secret: "your_consumer_secret",
-    passkey: "your_passkey",
-    shortcode: "your_shortcode",
-    environment: "sandbox"  // Optional, defaults to 'sandbox'
+// Initialize with your credentials
+$mpesa = new MPesa(
+    'your-initiator-name',
+    'your-security-credential',
+    'your-party-a',
+    'https://your-domain.com/timeout',
+    'https://your-domain.com/result'
 );
 
-$mpesa = new Mpesa($config);
+// Query account balance
+try {
+    $response = $mpesa->queryAccountBalance('your-bearer-token');
+    print_r($response);
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage();
+}
 ```
 
-### 4. Using Config Setter Methods
+### Using the Trait in Your Own Class
+
+You can also use the trait in your own class:
 
 ```php
-use MesaSDK\PhpMpesa\Config;
-use MesaSDK\PhpMpesa\Mpesa;
+use MPesa\Traits\HasAccountBalance;
 
-$config = new Config();
-$config->setEnvironment("sandbox")
-    ->setConsumerKey("your_consumer_key")
-    ->setConsumerSecret("your_consumer_secret")
-    ->setPasskey("your_passkey")
-    ->setShortcode("your_shortcode");
+class YourClass
+{
+    use HasAccountBalance;
 
-$mpesa = new Mpesa($config);
+    public function __construct()
+    {
+        $this->initializeAccountBalance(
+            'your-initiator-name',
+            'your-security-credential',
+            'your-party-a',
+            'https://your-domain.com/timeout',
+            'https://your-domain.com/result'
+        );
+    }
+}
 ```
 
-### Configuration Parameters
+### Handling Callback Results
 
-All configuration methods accept the following parameters:
-
-- `environment`: The API environment ('sandbox' or 'production')
-- `consumer_key`: Your app's Consumer Key from the M-Pesa Developer Portal
-- `consumer_secret`: Your app's Consumer Secret from the M-Pesa Developer Portal
-- `passkey`: Your M-Pesa Passkey for generating transaction passwords
-- `shortcode`: Your business Shortcode, Till Number, or Paybill Number
-- `base_url`: (Optional) Custom base URL if needed
-
-## Usage Examples
-
-### 1. C2B Integration
+When M-PESA sends the final result to your ResultURL, you can parse it using:
 
 ```php
-use MesaSDK\PhpMpesa\Mpesa;
-
-$mpesa = new Mpesa([/* your config */]);
-
-// Register C2B URLs
-$response = $mpesa->registerUrls([
-    'ValidationURL' => 'https://example.com/validation',
-    'ConfirmationURL' => 'https://example.com/confirmation',
-    'ResponseType' => 'Completed'
-]);
-
-// Process C2B transaction
-$result = $mpesa->c2b([
-    'ShortCode' => 'YOUR_SHORTCODE',
-    'CommandID' => 'CustomerPayBillOnline',
-    'Amount' => '100',
-    'Msisdn' => '254712345678',
-    'BillRefNumber' => 'INV001'
-]);
+$balances = $mpesa->parseBalanceResult($callbackResult);
+print_r($balances);
 ```
 
-### 2. Authentication
+## Response Format
 
-```php
-use MesaSDK\PhpMpesa\Authentication;
+The initial response will be in the format:
 
-$auth = new Authentication($config);
-$token = $auth->generateToken();
+```json
+{
+  "OriginatorConversationID": "2c22-4733-b801-a1eaa3f9763c",
+  "ConversationID": "AG_20240211_70101d5c7e1c4fbf514f",
+  "ResponseCode": "0",
+  "ResponseDescription": "Accept the service request successfully."
+}
 ```
 
-### 3. STK Push
+The callback result will be parsed into an array of account balances:
 
 ```php
-$response = $mpesa->stkPush([
-    'Amount' => 1,
-    'PartyA' => '254712345678',
-    'PartyB' => 'YOUR_SHORTCODE',
-    'PhoneNumber' => '254712345678',
-    'CallBackURL' => 'https://example.com/callback',
-    'AccountReference' => 'CompanyXLTD',
-    'TransactionDesc' => 'Payment of X'
-]);
+[
+    [
+        'accountName' => 'Working Account',
+        'currency' => 'ETB',
+        'availableBalance' => '0.00',
+        'reservedAmount' => '0.00',
+        'unClearedBalance' => '0.00',
+        'totalBalance' => '0.00'
+    ],
+    // ... more accounts
+]
 ```
 
 ## Error Handling
 
-The SDK includes comprehensive error handling:
+The implementation throws exceptions for:
 
-```php
-try {
-    $result = $mpesa->c2b([/* params */]);
-} catch (MpesaException $e) {
-    // Handle M-Pesa specific errors
-    echo $e->getMessage();
-    echo $e->getCode();
-} catch (\Exception $e) {
-    // Handle general errors
-    echo $e->getMessage();
-}
-```
+- cURL errors
+- API errors (HTTP 4xx, 5xx responses)
+- Invalid response formats
+- Missing configuration
+
+## Security
+
+- Never commit your security credentials to version control
+- Use environment variables or a secure configuration management system
+- Ensure your callback URLs use HTTPS
+- Validate all incoming callback data
+
+## License
+
+MIT License
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ```
 

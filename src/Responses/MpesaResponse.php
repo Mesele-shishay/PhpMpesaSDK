@@ -120,4 +120,13 @@ class MpesaResponse
             ]
         ];
     }
+
+    /**
+     * Get the response data
+     * @return array
+     */
+    public function getData(): array
+    {
+        return $this->rawResponse['data'] ?? $this->rawResponse;
+    }
 }

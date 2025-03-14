@@ -5,6 +5,7 @@ use GuzzleHttp\Client;
 use MesaSDK\PhpMpesa\Traits\MpesaRegisterUrlTrait;
 use MesaSDK\PhpMpesa\Traits\STKPushTrait;
 use MesaSDK\PhpMpesa\Base\BaseMpesa;
+use MesaSDK\PhpMpesa\Traits\B2CTrait;
 /**
  * Class Mpesa
  * 
@@ -16,7 +17,7 @@ use MesaSDK\PhpMpesa\Base\BaseMpesa;
 class Mpesa extends BaseMpesa
 {
 
-    use STKPushTrait, MpesaRegisterUrlTrait;
+    use STKPushTrait, MpesaRegisterUrlTrait, B2CTrait;
 
     private Client $client;
     private ?STKPushTrait $stkPushService = null;
