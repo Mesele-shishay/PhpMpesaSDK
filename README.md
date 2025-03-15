@@ -363,8 +363,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-For support and queries, please [create an issue](link-to-issues) or contact [your-contact-information].
-
 ## Disclaimer
 
 This is example code for demonstration purposes. Ensure proper testing and security measures before using in a production environment.
