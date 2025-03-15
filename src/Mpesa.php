@@ -16,7 +16,34 @@ use MesaSDK\PhpMpesa\Exceptions\MpesaException;
  * Main class for interacting with the M-Pesa API, providing methods for
  * initiating transactions and handling M-Pesa payment operations.
  * 
+ * This class provides a comprehensive interface to the M-Pesa payment gateway,
+ * supporting operations such as:
+ * - STK Push (Lipa Na M-Pesa Online)
+ * - B2C Payments
+ * - URL Registration
+ * - Transaction Status Queries
+ * 
+ * Example usage:
+ * ```php
+ * $mpesa = new Mpesa([
+ *     'consumer_key' => 'your_consumer_key',
+ *     'consumer_secret' => 'your_consumer_secret',
+ *     'environment' => 'sandbox', // or 'production'
+ *     'shortcode' => '174379',
+ *     'key' => 'your_passkey'
+ * ]);
+ * 
+ * // Initiate STK Push
+ * $response = $mpesa->stkPush(
+ *     100, // Amount
+ *     '251712345678', // Phone number
+ *     'REF123', // Reference
+ *     'Payment for goods' // Description
+ * );
+ * ```
+ * 
  * @package MpesaSDK
+ * @see https://developer.safaricom.et/ for M-Pesa API documentation
  */
 class Mpesa extends BaseMpesa
 {
@@ -195,7 +222,7 @@ class Mpesa extends BaseMpesa
      */
     public function setPhoneNumber(string $phone): self
     {
-        // Basic validation for Kenyan phone numbers
+        // Basic validation for Ethiopian phone numbers
         if (!preg_match('/^251[17]\d{8}$/', $phone)) {
             throw new \InvalidArgumentException('Phone number must be in the format 251XXXXXXXXX');
         }
