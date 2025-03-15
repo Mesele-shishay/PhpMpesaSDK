@@ -6,7 +6,10 @@ A PHP SDK for seamless integration with Safaricom's M-Pesa payment services. Thi
 
 ✨ Simple and intuitive API with fluent interface
 ✨ Comprehensive M-Pesa operations support
-✨ Robust error handling
+✨ Advanced configuration management
+✨ Built-in caching support
+✨ Robust error handling and retries
+✨ Comprehensive logging system
 ✨ Type-safe implementation
 ✨ Well-documented codebase
 ✨ Production-ready security measures
@@ -38,6 +41,12 @@ MPESA_CONSUMER_KEY=your_consumer_key
 MPESA_CONSUMER_SECRET=your_consumer_secret
 MPESA_SHORTCODE=your_shortcode
 MPESA_BASE_URL=https://sandbox.safaricom.co.ke
+
+# Optional logging configuration
+MPESA_LOG_DIR=logs
+MPESA_LOG_TO_FILE=true
+MPESA_LOG_TO_CONSOLE=false
+MPESA_MIN_LOG_LEVEL=debug
 ```
 
 ### 3. Initialize the SDK
@@ -46,22 +55,103 @@ MPESA_BASE_URL=https://sandbox.safaricom.co.ke
 use MesaSDK\PhpMpesa\Config;
 use MesaSDK\PhpMpesa\Mpesa;
 
-// Create configuration with fluent interface
+// Method 1: Auto-configuration from environment
+$config = new Config();  // Automatically loads from .env file
+
+// Method 2: Manual configuration with fluent interface
 $config = new Config();
 $config->setBaseUrl(getenv('MPESA_BASE_URL'))
     ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
     ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
     ->setEnvironment(getenv('MPESA_ENVIRONMENT'))
     ->setShortCode(getenv('MPESA_SHORTCODE'))
-    ->setVerifySSL(true);  // Set to false for sandbox testing
+    ->setVerifySSL(true);
+
+// Method 3: Configuration with options array
+$config = new Config(null, null, null, null, null, null, [
+    'request_timeout' => 60,
+    'max_retries' => 3,
+    'retry_delay' => 1000,
+    'verify_ssl' => true
+]);
 
 // Initialize Mpesa
 $mpesa = new Mpesa($config);
+```
 
-// Optional: Configure additional settings if needed
-$mpesa->setPassKey('your-pass-key')  // For STK Push
-    ->setInitiatorPassword('your-password')  // For B2C/B2B
-    ->setTimeout(30);  // Request timeout in seconds
+## Configuration Options
+
+### Core Configuration
+
+```php
+$config
+    ->setEnvironment('production')          // 'sandbox' or 'production'
+    ->setBaseUrl('https://api.example.com') // API endpoint
+    ->setConsumerKey('your-key')           // Your consumer key
+    ->setConsumerSecret('your-secret')      // Your consumer secret
+    ->setPasskey('your-passkey')           // For STK Push
+    ->setShortcode('123456')               // Your business shortcode
+    ->setVerifySSL(true);                  // SSL verification
+```
+
+### Request Handling
+
+```php
+$config
+    ->setRequestTimeout(30)                 // Timeout in seconds
+    ->setRetryConfig(3, 1000);             // 3 retries, 1000ms delay
+```
+
+### Logging Configuration
+
+```php
+$config->setLoggingConfig([
+    'log_dir' => 'logs',                   // Log directory
+    'log_to_file' => true,                 // Enable file logging
+    'log_to_console' => false,             // Enable console logging
+    'min_log_level' => 'debug',            // Minimum log level
+    'log_format' => null,                  // Custom log format
+    'max_file_size' => 10 * 1024 * 1024,   // 10MB max file size
+    'max_files' => 5                       // Keep 5 rotated files
+]);
+```
+
+### Caching Configuration
+
+```php
+$config->setCaching(
+    true,                                  // Enable caching
+    '/custom/cache/dir',                   // Custom cache directory
+    3600                                   // Cache TTL in seconds
+);
+```
+
+### Environment-Specific Configuration
+
+```php
+// Production settings
+$config
+    ->setEnvironment('production')
+    ->setVerifySSL(true)
+    ->setRequestTimeout(60)
+    ->setRetryConfig(3, 2000)
+    ->setLoggingConfig([
+        'log_to_file' => true,
+        'log_to_console' => false,
+        'min_log_level' => 'error'
+    ]);
+
+// Development settings
+$config
+    ->setEnvironment('sandbox')
+    ->setVerifySSL(false)
+    ->setRequestTimeout(30)
+    ->setRetryConfig(2, 1000)
+    ->setLoggingConfig([
+        'log_to_file' => true,
+        'log_to_console' => true,
+        'min_log_level' => 'debug'
+    ]);
 ```
 
 ## Common Use Cases
@@ -179,11 +269,24 @@ echo json_encode([
 2. **Production Settings**
 
    ```php
-   $config->setEnvironment('production')
-          ->setSecureSSL(true);
+   $config
+       ->setEnvironment('production')
+       ->setVerifySSL(true)
+       ->setRequestTimeout(60)
+       ->setLoggingConfig([
+           'min_log_level' => 'error',
+           'log_to_file' => true,
+           'log_to_console' => false
+       ]);
    ```
 
-3. **Callback Security**
+3. **Caching Security**
+
+   - Use secure cache directories
+   - Implement proper file permissions
+   - Regular cache cleanup
+
+4. **Callback Security**
    - Validate all incoming data
    - Use HTTPS for callbacks
    - Implement IP whitelisting
@@ -223,9 +326,9 @@ $config->setEnvironment('sandbox');
 
 ## Support
 
-- [Create an Issue](https://github.com/yourusername/php-mpesa-sdk/issues)
-- [Documentation](https://your-documentation-url.com)
-- Email: your.support@email.com
+- [Create an Issue](https://github.com/Mesele-shishay/PhpMpesaSDK/issues)
+- [Documentation](https://php-mpesa-sdk.vercel.app)
+- Email: messeleshishaymm@email.com
 
 ## Contributing
 

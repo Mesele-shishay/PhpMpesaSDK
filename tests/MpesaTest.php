@@ -156,7 +156,9 @@ test('mpesa can initiate b2c payment', function () {
         '174379',
         '251712345678',
         'Test payment',
-        'Test'
+        'Test',
+        'https://example.com/timeout',
+        'https://example.com/result'
     );
 
     expect($response)->toBeInstanceOf(\MesaSDK\PhpMpesa\Responses\MpesaResponse::class)

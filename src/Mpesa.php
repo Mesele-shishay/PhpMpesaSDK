@@ -7,6 +7,9 @@ use MesaSDK\PhpMpesa\Traits\STKPushTrait;
 use MesaSDK\PhpMpesa\Base\BaseMpesa;
 use MesaSDK\PhpMpesa\Traits\B2CTrait;
 use MesaSDK\PhpMpesa\Traits\CommonTrait;
+use MesaSDK\PhpMpesa\Contracts\MpesaInterface;
+use MesaSDK\PhpMpesa\Exceptions;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 /**
  * Class Mpesa
  * 
@@ -31,6 +34,15 @@ class Mpesa extends BaseMpesa
 
     /** @var string|null The name of the initiator */
     protected ?string $initiatorName = null;
+
+    /** @var string|null URL for timeout notifications */
+    protected ?string $timeoutUrl = null;
+
+    /** @var string|null URL for transaction results */
+    protected ?string $resultUrl = null;
+
+    /** @var string|null Transaction occasion */
+    protected ?string $occasion = null;
 
     /**
      * Mpesa constructor.
@@ -71,98 +83,107 @@ class Mpesa extends BaseMpesa
     /**
      * Initiate an STK Push request
      * 
-     * @param float $amount Amount to charge
-     * @param string $phone Phone number in the format 2547XXXXXXXX
-     * @param string $reference Account reference
-     * @param string $description Transaction description
-     * @return \MesaSDK\PhpMpesa\Contracts\MpesaInterface Returns the current instance for method chaining
-     * @throws \InvalidArgumentException When parameters are invalid
-     * @throws \RuntimeException When the request fails
+     * @return MpesaInterface
+     * @throws MpesaException
      */
-    public function stkPush(float $amount, string $phone, string $reference, string $description): \MesaSDK\PhpMpesa\Contracts\MpesaInterface
+    public function initiateSTKPush(): MpesaInterface
     {
-        $this->setAmount($amount)
-            ->setPhoneNumber($phone)
-            ->setAccountReference($reference)
-            ->setTransactionDesc($description);
+        $this->validateRequiredFields();
 
-        return $this->initiateSTKPush();
+        $payload = [
+            'BusinessShortCode' => $this->config->getShortcode(),
+            'Password' => $this->generatePassword(),
+            'Timestamp' => $this->getTimestamp(),
+            'TransactionType' => 'CustomerPayBillOnline',
+            'Amount' => $this->amount,
+            'PartyA' => $this->phoneNumber,
+            'PartyB' => $this->config->getShortcode(),
+            'PhoneNumber' => $this->phoneNumber,
+            'CallBackURL' => $this->callbackUrl,
+            'AccountReference' => $this->accountReference,
+            'TransactionDesc' => $this->transactionDesc
+        ];
+
+        $this->response = $this->executeRequest('POST', '/mpesa/stkpush/v3/processrequest', $payload);
+        return $this;
     }
 
     /**
      * Query the status of an STK Push transaction
      * 
-     * @param string $checkoutRequestId The checkout request ID from the STK Push response
-     * @return array The query response
-     * @throws \RuntimeException When the request fails
+     * @param string $checkoutRequestId The checkout request ID
+     * @return array Response from the API
+     * @throws MpesaException
      */
-    public function stkQuery(string $checkoutRequestId): array
+    public function querySTKStatus(string $checkoutRequestId): array
     {
-        try {
-            if ($this->config->getEnvironment() === 'sandbox') {
-                $timestamp = "20240918055823";
-            } elseif ($this->config->getEnvironment() === 'production') {
-                $timestamp = date('YmdHis');
-            } else {
-                throw new \InvalidArgumentException('Invalid environment');
-            }
+        $payload = [
+            'BusinessShortCode' => $this->config->getShortcode(),
+            'Password' => $this->generatePassword(),
+            'Timestamp' => $this->getTimestamp(),
+            'CheckoutRequestID' => $checkoutRequestId
+        ];
 
-            $shortcode = $this->config->getShortcode();
-            $password = base64_encode(hash('sha256', $shortcode . $this->config->getPasskey() . $timestamp));
-
-            $response = $this->client->request(
-                'POST',
-                $this->config->getBaseUrl() . "/mpesa/stkpushquery/v1/query",
-                [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $this->auth->getToken(),
-                    ],
-                    'json' => [
-                        "BusinessShortCode" => $shortcode,
-                        "Password" => $password,
-                        "Timestamp" => $timestamp,
-                        "CheckoutRequestID" => $checkoutRequestId
-                    ]
-                ]
-            );
-
-            return json_decode($response->getBody(), true);
-        } catch (\Exception $e) {
-            throw new \RuntimeException('STK Push query failed: ' . $e->getMessage(), 0, $e);
-        }
+        return $this->executeRequest('POST', '/stkpushquery/v1/query', $payload);
     }
 
     /**
-     * Register URLs for receiving M-Pesa transaction notifications
+     * Register URLs for receiving transaction callbacks
      * 
      * @param string $confirmationUrl URL for confirmation notifications
      * @param string $validationUrl URL for validation notifications
-     * @return array The registration response
-     * @throws \RuntimeException When the request fails
+     * @return array Response from the API
+     * @throws MpesaException
      */
     public function registerUrls(string $confirmationUrl, string $validationUrl): array
     {
-        try {
-            $response = $this->client->request(
-                'POST',
-                $this->config->getBaseUrl() . "/mpesa/c2b/v1/registerurl",
-                [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $this->auth->getToken(),
-                    ],
-                    'json' => [
-                        "ShortCode" => $this->config->getShortcode(),
-                        "ResponseType" => "Completed",
-                        "ConfirmationURL" => $confirmationUrl,
-                        "ValidationURL" => $validationUrl
-                    ]
-                ]
-            );
+        $payload = [
+            'ShortCode' => $this->config->getShortcode(),
+            'ResponseType' => 'Completed',
+            'ConfirmationURL' => $confirmationUrl,
+            'ValidationURL' => $validationUrl
+        ];
 
-            return json_decode($response->getBody(), true);
-        } catch (\Exception $e) {
-            throw new \RuntimeException('URL registration failed: ' . $e->getMessage(), 0, $e);
+        return $this->executeRequest('POST', '/c2b/v1/registerurl', $payload);
+    }
+
+    /**
+     * Send a B2C payment
+     * 
+     * @param array $payload The B2C payment payload
+     * @return array Response from the API
+     * @throws MpesaException
+     */
+    public function sendB2C(array $payload): array
+    {
+        if (empty($this->initiatorName)) {
+            throw new MpesaException('Initiator name is required for B2C transactions');
         }
+
+        if (empty($this->resultUrl)) {
+            throw new MpesaException('Result URL is required for B2C transactions');
+        }
+
+        if (empty($this->timeoutUrl)) {
+            throw new MpesaException('Timeout URL is required for B2C transactions');
+        }
+
+        $defaultPayload = [
+            'InitiatorName' => $this->initiatorName,
+            'SecurityCredential' => $this->securityCredential,
+            'CommandID' => $this->commandID,
+            'Amount' => $this->amount,
+            'PartyA' => $this->config->getShortcode(),
+            'PartyB' => $this->phoneNumber,
+            'Remarks' => $this->transactionDesc,
+            'QueueTimeOutURL' => $this->timeoutUrl,
+            'ResultURL' => $this->resultUrl,
+            'Occassion' => $this->occasion ?? ''
+        ];
+
+        $payload = array_merge($defaultPayload, $payload);
+
+        return $this->executeRequest('POST', '/mpesa/b2c/v1/paymentrequest', $payload);
     }
 
     /**
@@ -255,10 +276,9 @@ class Mpesa extends BaseMpesa
      * 
      * @return bool Returns true if SSL certificates are verified, false otherwise
      */
-    public function getVerifySSL(): self
+    public function getVerifySSL(): bool
     {
-        $this->auth->getVerifySSL();
-        return $this;
+        return $this->auth->getVerifySSL();
     }
 
     /**
@@ -306,5 +326,99 @@ class Mpesa extends BaseMpesa
     {
         $this->initiatorName = $initiatorName;
         return $this;
+    }
+
+    /**
+     * Generate the M-Pesa API password
+     * 
+     * @return string
+     */
+    protected function generatePassword(): string
+    {
+        $timestamp = $this->getTimestamp();
+        return base64_encode($this->config->getShortcode() . $this->config->getPasskey() . $timestamp);
+    }
+
+    /**
+     * Get the current timestamp in YYYYMMDDHHmmss format
+     * 
+     * @return string
+     */
+    protected function getTimestamp(): string
+    {
+        return date('YmdHis');
+    }
+
+    /**
+     * Set the timeout URL for B2C transactions
+     * 
+     * @param string $url Valid HTTPS URL
+     * @return self Returns the current instance for method chaining
+     * @throws \InvalidArgumentException If URL is invalid or not HTTPS
+     */
+    public function setTimeoutUrl(string $url): self
+    {
+        if (!filter_var($url, FILTER_VALIDATE_URL) || strpos($url, 'https://') !== 0) {
+            throw new \InvalidArgumentException('Timeout URL must be a valid HTTPS URL');
+        }
+        $this->timeoutUrl = $url;
+        return $this;
+    }
+
+    /**
+     * Set the result URL for B2C transactions
+     * 
+     * @param string $url Valid HTTPS URL
+     * @return self Returns the current instance for method chaining
+     * @throws \InvalidArgumentException If URL is invalid or not HTTPS
+     */
+    public function setResultUrl(string $url): self
+    {
+        if (!filter_var($url, FILTER_VALIDATE_URL) || strpos($url, 'https://') !== 0) {
+            throw new \InvalidArgumentException('Result URL must be a valid HTTPS URL');
+        }
+        $this->resultUrl = $url;
+        return $this;
+    }
+
+    /**
+     * Set the occasion for B2C transactions
+     */
+    public function setOccasion(string $occasion): self
+    {
+        $this->occasion = $occasion;
+        return $this;
+    }
+
+    /**
+     * Initiate an STK Push transaction
+     * 
+     * @param float $amount Amount to charge
+     * @param string $phone Customer's phone number
+     * @param string $reference Account reference
+     * @param string $description Transaction description
+     * @return MpesaInterface
+     * @throws MpesaException|\InvalidArgumentException
+     */
+    public function stkPush(float $amount, string $phone, string $reference, string $description): MpesaInterface
+    {
+        $this->setAmount($amount)
+            ->setPhoneNumber($phone)
+            ->setAccountReference($reference)
+            ->setTransactionDesc($description);
+
+        return $this->initiateSTKPush();
+    }
+
+    /**
+     * Query the status of an STK Push transaction
+     * 
+     * @param string $checkoutRequestId The checkout request ID to query
+     * @return array Response from the API
+     * @throws MpesaException
+     */
+    public function stkQuery(string $checkoutRequestId): array
+    {
+        return $this->querySTKStatus($checkoutRequestId);
     }
 }

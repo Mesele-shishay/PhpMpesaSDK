@@ -27,15 +27,15 @@ try {
     // Use the b2c method with positional arguments
     $result2 = $mpesa->b2c(
         'apitest',                // initiatorName
-        'your_security_credential', // securityCredential
-        'SalaryPayment',          // commandId
-        250.75,                   // amount
-        '1234567',               // partyA
-        '251700404709',          // partyB
+        'lMhf0UqE4ydeEDwpUskmPgkNDZnA6NLi7z3T1TQuWCkH3/ScW8pRRnobq/AcwFvbC961+zDMgOEYGm8Oivb7L/7Y9ED3lhR7pJvnH8B1wYis5ifdeeWI6XE2NSq8X1Tc7QB9Dg8SlPEud3tgloB2DlT+JIv3ebIl/J/8ihGVrq499bt1pz/EA2nzkCtGeHRNbEDxkqkEnbioV0OM//0bv4K++XyV6jUFlIIgkDkmcK6aOU8mPBHs2um9aP+Y+nTJaa6uHDudRFg0+3G6gt1zRCPs8AYbts2IebseBGfZKv5K6Lqk9/W8657gEkrDZE8Mi78MVianqHdY/8d6D9KKhw==', // securityCredential
+        'BusinessPayment',          // commandId
+        10,                   // amount
+        '1020',               // partyA
+        '251700100150',          // partyB
         'Bonus payment',          // remarks
-        'Performance Bonus',      // occasion
-        'https://your-domain.com/timeout', // queueTimeOutURL
-        'https://your-domain.com/result'   // resultURL
+        'StallOwner',      // occasion
+        'https://testt.tugza.tech/', // queueTimeOutURL
+        'https://testt.tugza.tech/'   // resultURL
     );
 
     print_r($result2->getResponseMessage());

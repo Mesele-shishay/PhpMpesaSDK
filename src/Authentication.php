@@ -3,6 +3,7 @@ namespace MesaSDK\PhpMpesa;
 
 use GuzzleHttp\Client;
 use MesaSDK\PhpMpesa\Exceptions\MpesaException;
+use MesaSDK\PhpMpesa\Traits\HttpClientTrait;
 
 /**
  * Class Authentication
@@ -14,6 +15,8 @@ use MesaSDK\PhpMpesa\Exceptions\MpesaException;
  */
 class Authentication
 {
+    use HttpClientTrait;
+
     /** @var string The current access token */
     private string $accessToken = '';
 
@@ -68,17 +71,18 @@ class Authentication
     /**
      * Authentication constructor.
      * 
-     * @param Config $config The configuration instance
+     * @param Config $config Configuration instance
      * @param bool $verifySSL Whether to verify SSL certificates
      */
     public function __construct(Config $config, bool $verifySSL = true)
     {
         $this->config = $config;
         $this->verifySSL = $verifySSL;
+        $this->client = $this->createHttpClient($config);
     }
 
     /**
-     * Set the HTTP client instance for testing purposes
+     * Set the HTTP client instance
      * 
      * @param Client $client The HTTP client instance
      * @return self
@@ -94,10 +98,10 @@ class Authentication
      * 
      * @return Client
      */
-    private function getClient(): Client
+    protected function getClient(): Client
     {
         if (!$this->client) {
-            $this->client = new Client(['verify' => $this->verifySSL]);
+            $this->client = $this->createHttpClient($this->config);
         }
         return $this->client;
     }
@@ -125,66 +129,49 @@ class Authentication
     }
 
     /**
-     * Authenticate with the M-Pesa API and get an access token
+     * Authenticate with the M-Pesa API
      * 
      * @return string The access token
-     * @throws MpesaException When authentication fails
+     * @throws MpesaException
      */
     public function authenticate(): string
     {
-        // Return cached token if it's still valid
-        if ($this->hasToken() && !$this->isExpired()) {
+        if (!$this->isExpired()) {
             return $this->accessToken;
         }
 
+        $url = $this->config->getBaseUrl() . '/v1/token/generate?grant_type=client_credentials';
+        $options = [
+            'headers' => [
+                'Authorization' => $this->generateBasicAuth(),
+                'Accept' => 'application/json',
+            ]
+        ];
+
         try {
-            // Validate configuration before making request
-            $this->config->validate();
-            $options = [
-                'headers' => [
-                    'Authorization' => $this->generateBasicAuth(),
-                    'Accept' => 'application/json',
-                ]
-            ];
-
-            $response = $this->getClient()->request(
+            $response = $this->executeWithRetry(
+                $this->getClient(),
                 'GET',
-                $this->config->getBaseUrl() . '/v1/token/generate?grant_type=client_credentials',
-                $options
+                $url,
+                $options,
+                $this->config
             );
-            $data = json_decode($response->getBody(), true);
 
-            if (!$data || !isset($data['access_token'])) {
-                throw new MpesaException('Invalid response from authentication endpoint');
+            if (isset($response['access_token'])) {
+                $this->accessToken = $response['access_token'];
+                $this->expiresAt = time() + ($response['expires_in'] ?? 3599);
+                $this->tokenType = $response['token_type'] ?? 'Bearer';
+                return $this->accessToken;
             }
 
-            $this->accessToken = $data['access_token'];
-            $this->expiresAt = time() + ($data['expires_in'] ?? 3599);
-            $this->tokenType = $data['token_type'] ?? 'Bearer';
-
-            return $this->accessToken;
-        } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $response = $e->getResponse();
-            $data = json_decode($response->getBody(), true);
-
-            if (isset($data['errorCode']) && $this->isAuthenticationError($data['errorCode'])) {
-                $errorDetails = $this->getErrorDetails($data['errorCode']);
-                throw new MpesaException(
-                    $errorDetails['description'] ?? $data['errorMessage'],
-                    $response->getStatusCode(),
-                    ['error_details' => $errorDetails]
-                );
-            }
-
-
-            throw new MpesaException(
-                $data['errorMessage'] ?? 'Authentication failed',
-                $response->getStatusCode()
-            );
+            throw new MpesaException('Failed to get access token: Invalid response format');
+        } catch (MpesaException $e) {
+            throw $e;
         } catch (\Exception $e) {
             throw new MpesaException(
-                'Authentication failed: ' . $e->getMessage(),
-                $e->getCode() ?: 500
+                'Failed to get access token: ' . $e->getMessage(),
+                0,
+                ['error' => $e->getMessage()]
             );
         }
     }
@@ -279,5 +266,15 @@ class Authentication
     public function isAuthenticationError(string $code): bool
     {
         return isset(self::ERROR_CODES[$code]);
+    }
+
+    /**
+     * Get the HTTP client instance for external use
+     * 
+     * @return Client
+     */
+    public function getHttpClient(): Client
+    {
+        return $this->getClient();
     }
 }

@@ -55,6 +55,24 @@ class Config
     /** @var int Maximum number of log files to keep */
     private ?int $max_files;
 
+    /** @var int Request timeout in seconds */
+    private int $request_timeout = 30;
+
+    /** @var int Maximum number of retry attempts */
+    private int $max_retries = 3;
+
+    /** @var int Delay between retries in milliseconds */
+    private int $retry_delay = 1000;
+
+    /** @var bool Whether to use configuration caching */
+    private bool $use_cache = false;
+
+    /** @var string Cache directory path */
+    private string $cache_dir;
+
+    /** @var int Cache TTL in seconds */
+    private int $cache_ttl = 3600;
+
     /**
      * Config constructor.
      * 
@@ -78,6 +96,7 @@ class Config
      * @param string|null $passkey Passkey for generating transaction passwords
      * @param string|null $shortcode Business Shortcode/Till Number/Paybill Number
      * @param string|null $environment Environment type ('sandbox' or 'production')
+     * @param array $options Additional configuration options
      */
     public function __construct(
         string $base_url = null,
@@ -85,7 +104,8 @@ class Config
         string $consumer_secret = null,
         string $passkey = null,
         string $shortcode = null,
-        string $environment = null
+        string $environment = null,
+        array $options = []
     ) {
         // Try to load from environment if no parameters provided
         if ($this->shouldLoadFromEnv($base_url, $consumer_key, $consumer_secret, $passkey, $shortcode, $environment)) {
@@ -111,6 +131,14 @@ class Config
             'max_file_size' => null,
             'max_files' => null
         ]);
+
+        // Set additional options if provided
+        if (!empty($options)) {
+            $this->setOptions($options);
+        }
+
+        // Initialize cache directory
+        $this->cache_dir = sys_get_temp_dir() . '/mpesa-sdk-cache';
     }
 
     /**
@@ -130,6 +158,30 @@ class Config
 
         if (!in_array($this->environment, ['sandbox', 'production'])) {
             throw new \InvalidArgumentException('Environment must be either "sandbox" or "production"');
+        }
+
+        // Validate timeout and retry settings
+        if ($this->request_timeout < 1) {
+            throw new \InvalidArgumentException('Request timeout must be at least 1 second');
+        }
+
+        if ($this->max_retries < 0) {
+            throw new \InvalidArgumentException('Maximum retries cannot be negative');
+        }
+
+        if ($this->retry_delay < 0) {
+            throw new \InvalidArgumentException('Retry delay cannot be negative');
+        }
+
+        // Validate cache configuration if enabled
+        if ($this->use_cache) {
+            if (!is_dir($this->cache_dir) || !is_writable($this->cache_dir)) {
+                throw new \RuntimeException('Cache directory is not writable: ' . $this->cache_dir);
+            }
+
+            if ($this->cache_ttl < 0) {
+                throw new \InvalidArgumentException('Cache TTL cannot be negative');
+            }
         }
     }
 
@@ -423,5 +475,113 @@ class Config
         }
 
         return $value ?? $default;
+    }
+
+    /**
+     * Set multiple configuration options at once
+     *
+     * @param array $options Configuration options
+     * @return self
+     */
+    public function setOptions(array $options): self
+    {
+        foreach ($options as $key => $value) {
+            $method = 'set' . str_replace('_', '', ucwords($key, '_'));
+            if (method_exists($this, $method)) {
+                $this->$method($value);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Set request timeout
+     *
+     * @param int $timeout Timeout in seconds
+     * @return self
+     */
+    public function setRequestTimeout(int $timeout): self
+    {
+        $this->request_timeout = $timeout;
+        return $this;
+    }
+
+    /**
+     * Get request timeout
+     *
+     * @return int
+     */
+    public function getRequestTimeout(): int
+    {
+        return $this->request_timeout;
+    }
+
+    /**
+     * Set retry configuration
+     *
+     * @param int $max_retries Maximum number of retry attempts
+     * @param int $retry_delay Delay between retries in milliseconds
+     * @return self
+     */
+    public function setRetryConfig(int $max_retries, int $retry_delay): self
+    {
+        $this->max_retries = $max_retries;
+        $this->retry_delay = $retry_delay;
+        return $this;
+    }
+
+    /**
+     * Get retry configuration
+     *
+     * @return array
+     */
+    public function getRetryConfig(): array
+    {
+        return [
+            'max_retries' => $this->max_retries,
+            'retry_delay' => $this->retry_delay
+        ];
+    }
+
+    /**
+     * Enable or disable configuration caching
+     *
+     * @param bool $use_cache Whether to use caching
+     * @param string|null $cache_dir Custom cache directory
+     * @param int|null $cache_ttl Cache TTL in seconds
+     * @return self
+     */
+    public function setCaching(bool $use_cache, ?string $cache_dir = null, ?int $cache_ttl = null): self
+    {
+        $this->use_cache = $use_cache;
+
+        if ($cache_dir !== null) {
+            $this->cache_dir = $cache_dir;
+        }
+
+        if ($cache_ttl !== null) {
+            $this->cache_ttl = $cache_ttl;
+        }
+
+        // Create cache directory if it doesn't exist
+        if ($this->use_cache && !is_dir($this->cache_dir)) {
+            mkdir($this->cache_dir, 0755, true);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get caching configuration
+     *
+     * @return array
+     */
+    public function getCachingConfig(): array
+    {
+        return [
+            'enabled' => $this->use_cache,
+            'directory' => $this->cache_dir,
+            'ttl' => $this->cache_ttl
+        ];
     }
 }

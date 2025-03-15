@@ -8,7 +8,7 @@ use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 $config = new Config();
 
 $config->setEnvironment('sandbox')
-    ->setConsumerKey("QeZ1WgHxMJCngVLGbsHwMQSmZO7HHnQjGGbeSH3VaKB90fta")
+    ->setConsumerKey("QeZ1WgHxMJCngVLGbsHwMQSmZO7HHnQjGGbeSH3VaKB90fta")->setVerifySSL(false)
     ->setConsumerSecret("bM7gNvNTXH7T3IPzUAIYpa4xzlENgGPC4raksDXWt2VvjcquzgD80P3G6cM01BEv");
 
 try {
@@ -16,7 +16,6 @@ try {
     $auth = new Authentication($config);
 
     // Disable SSL verification for sandbox environment
-    $auth->setVerifySSL(false);
 
     // Authenticate and get token
     $auth->authenticate();

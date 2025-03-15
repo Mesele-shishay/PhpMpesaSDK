@@ -7,9 +7,11 @@ use MesaSDK\PhpMpesa\Authentication;
 use MesaSDK\PhpMpesa\Contracts\MpesaInterface;
 use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 use MesaSDK\PhpMpesa\Logging\MpesaLogger;
+use MesaSDK\PhpMpesa\Traits\HttpClientTrait;
 
 abstract class BaseMpesa implements MpesaInterface
 {
+    use HttpClientTrait;
 
     /** @var Authentication The authentication instance */
     protected Authentication $auth;
@@ -281,5 +283,52 @@ abstract class BaseMpesa implements MpesaInterface
     protected function logApiResponse(string $endpoint, $response, int $statusCode): void
     {
         $this->logger->logResponse($endpoint, $response, $statusCode);
+    }
+
+    /**
+     * Execute an API request with authentication and retry logic
+     *
+     * @param string $method HTTP method
+     * @param string $endpoint API endpoint
+     * @param array $payload Request payload
+     * @return array Response data
+     * @throws MpesaException
+     */
+    protected function executeRequest(string $method, string $endpoint, array $payload = []): array
+    {
+        // Ensure we have a valid authentication token
+        $token = $this->auth->authenticate();
+
+        $url = $this->config->getBaseUrl() . $endpoint;
+        $options = [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ],
+            'json' => $payload
+        ];
+
+        // Log the API request
+        $this->logApiRequest($endpoint, $payload, $options['headers']);
+
+        try {
+            $response = $this->executeWithRetry(
+                $this->auth->getHttpClient(),
+                $method,
+                $url,
+                $options,
+                $this->config
+            );
+
+            // Log the API response
+            $this->logApiResponse($endpoint, $response, 200);
+
+            return $response;
+        } catch (MpesaException $e) {
+            // Log the error response
+            $this->logApiResponse($endpoint, $e->getMessage(), $e->getCode());
+            throw $e;
+        }
     }
 }

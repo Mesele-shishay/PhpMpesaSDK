@@ -47,13 +47,13 @@ trait B2CTrait
      * URL for timeout notifications
      * @var string|null
      */
-    protected ?string $queueTimeOutURL = null;
+    protected ?string $queueTimeoutUrl = null;
 
     /**
      * URL for result notifications
      * @var string|null
      */
-    protected ?string $resultURL = null;
+    protected ?string $resultUrl = null;
 
     /**
      * Additional information about the transaction
@@ -76,7 +76,7 @@ trait B2CTrait
         7 => 'Invalid party B',
         8 => 'Invalid amount',
         9 => 'Invalid remarks',
-        10 => 'Invalid occasion',
+        10 => 'Invalid occassion',
         11 => 'Invalid URL',
         12 => 'Invalid queue timeout URL',
         13 => 'Invalid result URL',
@@ -217,24 +217,24 @@ trait B2CTrait
     /**
      * Set the queue timeout URL
      *
-     * @param string $queueTimeOutURL
+     * @param string|null $url
      * @return self
      */
-    public function setQueueTimeOutURL(string $queueTimeOutURL): self
+    public function setQueueTimeoutUrl(?string $url): self
     {
-        $this->queueTimeOutURL = $queueTimeOutURL;
+        $this->queueTimeoutUrl = $url;
         return $this;
     }
 
     /**
      * Set the result URL
      *
-     * @param string $resultURL
+     * @param string|null $url
      * @return self
      */
-    public function setResultURL(string $resultURL): self
+    public function setResultUrl(?string $url): self
     {
-        $this->resultURL = $resultURL;
+        $this->resultUrl = $url;
         return $this;
     }
 
@@ -253,9 +253,9 @@ trait B2CTrait
             'PartyA' => $this->partyA,
             'PartyB' => $this->partyB,
             'Remarks' => $this->remarks,
-            'QueueTimeOutURL' => $this->queueTimeOutURL,
-            'ResultURL' => $this->resultURL,
-            'Occasion' => $this->occasion
+            'QueueTimeOutURL' => $this->queueTimeoutUrl,
+            'ResultURL' => $this->resultUrl,
+            'Occassion' => $this->occasion
         ];
     }
 
@@ -277,7 +277,7 @@ trait B2CTrait
         $data['QueueTimeOutURL'] = $data['QueueTimeOutURL'] ?? $this->config->get('queue_timeout_url');
         $data['ResultURL'] = $data['ResultURL'] ?? $this->config->get('result_url');
 
-        $endpoint = $this->config->getBaseUrl() . '/mpesa/b2c/v2/paymentrequest';
+        $endpoint = $this->config->getBaseUrl() . '/mpesa/b2c/v1/paymentrequest';
 
         $response = $this->client->post($endpoint, [
             'json' => $data,
@@ -288,6 +288,7 @@ trait B2CTrait
         ]);
 
         $decodedResponse = json_decode($response->getBody(), true);
+
         if (!$decodedResponse) {
             return MpesaResponse::error('Failed to decode API response');
         }
@@ -321,13 +322,24 @@ trait B2CTrait
             'partyA' => 'PartyA',
             'partyB' => 'PartyB',
             'remarks' => 'Remarks',
-            'occasion' => 'Occasion'
+            'occasion' => 'Occassion',
+            'resultUrl' => 'ResultURL',
+            'queueTimeoutUrl' => 'QueueTimeOutURL'
         ];
 
         foreach ($requiredFields as $property => $fieldName) {
             if (empty($this->$property)) {
                 throw new MpesaException("The {$fieldName} field is required for B2C transaction", 400);
             }
+        }
+
+        // Validate URLs
+        if (!filter_var($this->resultUrl, FILTER_VALIDATE_URL) || strpos($this->resultUrl, 'https://') !== 0) {
+            throw new MpesaException('Result URL must be a valid HTTPS URL', 400);
+        }
+
+        if (!filter_var($this->queueTimeoutUrl, FILTER_VALIDATE_URL) || strpos($this->queueTimeoutUrl, 'https://') !== 0) {
+            throw new MpesaException('Queue Timeout URL must be a valid HTTPS URL', 400);
         }
     }
 
@@ -342,8 +354,8 @@ trait B2CTrait
      * @param string $partyB The customer's phone number
      * @param string $remarks Additional information about the transaction
      * @param string $occasion Additional information about the transaction
-     * @param string|null $queueTimeOutURL URL for timeout notifications
-     * @param string|null $resultURL URL for result notifications
+     * @param string|null $queueTimeoutUrl URL for timeout notifications
+     * @param string|null $resultUrl URL for result notifications
      * @return MpesaResponse The API response
      * @throws MpesaException
      */
@@ -356,20 +368,27 @@ trait B2CTrait
         string $partyB,
         string $remarks,
         string $occasion,
-        string $queueTimeOutURL = null,
-        string $resultURL = null
+        ?string $queueTimeoutUrl = null,
+        ?string $resultUrl = null
     ): MpesaResponse {
-        return $this->setInitiatorName($initiatorName)
+        $this->setInitiatorName($initiatorName)
             ->setSecurityCredential($securityCredential)
             ->setCommandID($commandId)
             ->setAmount($amount)
             ->setPartyA($partyA)
             ->setPartyB($partyB)
             ->setRemarks($remarks)
-            ->setOccasion($occasion)
-            ->when($queueTimeOutURL, fn($self) => $self->setQueueTimeOutURL($queueTimeOutURL))
-            ->when($resultURL, fn($self) => $self->setResultURL($resultURL))
-            ->send();
+            ->setOccasion($occasion);
+
+        if ($queueTimeoutUrl !== null) {
+            $this->setQueueTimeoutUrl($queueTimeoutUrl);
+        }
+
+        if ($resultUrl !== null) {
+            $this->setResultUrl($resultUrl);
+        }
+
+        return $this->send();
     }
 
     /**
