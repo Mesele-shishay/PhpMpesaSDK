@@ -6,6 +6,7 @@ use MesaSDK\PhpMpesa\Traits\MpesaRegisterUrlTrait;
 use MesaSDK\PhpMpesa\Traits\STKPushTrait;
 use MesaSDK\PhpMpesa\Base\BaseMpesa;
 use MesaSDK\PhpMpesa\Traits\B2CTrait;
+use MesaSDK\PhpMpesa\Traits\CommonTrait;
 /**
  * Class Mpesa
  * 
@@ -16,14 +17,20 @@ use MesaSDK\PhpMpesa\Traits\B2CTrait;
  */
 class Mpesa extends BaseMpesa
 {
-
-    use STKPushTrait, MpesaRegisterUrlTrait, B2CTrait;
+    use CommonTrait, STKPushTrait, MpesaRegisterUrlTrait, B2CTrait {
+        CommonTrait::isSuccessful insteadof STKPushTrait, B2CTrait;
+        CommonTrait::getResultCode insteadof STKPushTrait, B2CTrait;
+        CommonTrait::getResultDesc insteadof STKPushTrait, B2CTrait;
+        CommonTrait::getCallbackData insteadof STKPushTrait, B2CTrait;
+    }
 
     private Client $client;
-    private ?STKPushTrait $stkPushService = null;
 
     /** @var string Customer's phone number */
     protected string $phoneNumber = '';
+
+    /** @var string|null The name of the initiator */
+    protected ?string $initiatorName = null;
 
     /**
      * Mpesa constructor.
@@ -33,19 +40,14 @@ class Mpesa extends BaseMpesa
      */
     public function __construct($config = null)
     {
-        if ($config instanceof Config) {
-            $this->config = $config;
-        } elseif (is_array($config)) {
-            $this->config = $this->createConfigFromArray($config);
-        } else {
-            $this->config = new Config();
-        }
+        // Call parent constructor first to initialize config and logger
+        parent::__construct($config);
 
-
+        // Initialize Guzzle client with SSL verification setting
         $this->client = new Client(['verify' => $this->config->getVerifySSL()]);
 
+        // Re-initialize authentication with SSL verification
         $this->auth = new Authentication($this->config, $this->config->getVerifySSL());
-
     }
 
     /**
@@ -67,46 +69,100 @@ class Mpesa extends BaseMpesa
     }
 
     /**
-     * Get the STK Push service instance
+     * Initiate an STK Push request
      * 
-     * @return STKPushTrait
+     * @param float $amount Amount to charge
+     * @param string $phone Phone number in the format 2547XXXXXXXX
+     * @param string $reference Account reference
+     * @param string $description Transaction description
+     * @return \MesaSDK\PhpMpesa\Contracts\MpesaInterface Returns the current instance for method chaining
+     * @throws \InvalidArgumentException When parameters are invalid
+     * @throws \RuntimeException When the request fails
      */
-    public function stkPush(): STKPushTrait
+    public function stkPush(float $amount, string $phone, string $reference, string $description): \MesaSDK\PhpMpesa\Contracts\MpesaInterface
     {
-        return $this->stkPushService;
+        $this->setAmount($amount)
+            ->setPhoneNumber($phone)
+            ->setAccountReference($reference)
+            ->setTransactionDesc($description);
+
+        return $this->initiateSTKPush();
     }
 
     /**
-     * Configure the Mpesa instance directly
+     * Query the status of an STK Push transaction
      * 
-     * @param array $config Configuration values
-     * @return self Returns the current instance for method chaining
+     * @param string $checkoutRequestId The checkout request ID from the STK Push response
+     * @return array The query response
+     * @throws \RuntimeException When the request fails
      */
-    public function configure(array $config): self
-    {
-        $this->config = $this->createConfigFromArray($config);
-        $this->auth = new Authentication($this->config);
-        $this->stkPushService = null; // Reset service instances
-        return $this;
-    }
-
-    /**
-     * Authenticate with the M-Pesa API
-     * 
-     * @return self Returns the current instance for method chaining
-     * @throws \RuntimeException When authentication fails
-     */
-    public function authenticate(): self
+    public function stkQuery(string $checkoutRequestId): array
     {
         try {
-            $this->auth->authenticate();
+            if ($this->config->getEnvironment() === 'sandbox') {
+                $timestamp = "20240918055823";
+            } elseif ($this->config->getEnvironment() === 'production') {
+                $timestamp = date('YmdHis');
+            } else {
+                throw new \InvalidArgumentException('Invalid environment');
+            }
+
+            $shortcode = $this->config->getShortcode();
+            $password = base64_encode(hash('sha256', $shortcode . $this->config->getPasskey() . $timestamp));
+
+            $response = $this->client->request(
+                'POST',
+                $this->config->getBaseUrl() . "/mpesa/stkpushquery/v1/query",
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $this->auth->getToken(),
+                    ],
+                    'json' => [
+                        "BusinessShortCode" => $shortcode,
+                        "Password" => $password,
+                        "Timestamp" => $timestamp,
+                        "CheckoutRequestID" => $checkoutRequestId
+                    ]
+                ]
+            );
+
+            return json_decode($response->getBody(), true);
         } catch (\Exception $e) {
-            $this->response = [
-                'errorMessage' => $e->getMessage()
-            ];
-            throw new \RuntimeException('Authentication failed: ' . $e->getMessage(), 0, $e);
+            throw new \RuntimeException('STK Push query failed: ' . $e->getMessage(), 0, $e);
         }
-        return $this;
+    }
+
+    /**
+     * Register URLs for receiving M-Pesa transaction notifications
+     * 
+     * @param string $confirmationUrl URL for confirmation notifications
+     * @param string $validationUrl URL for validation notifications
+     * @return array The registration response
+     * @throws \RuntimeException When the request fails
+     */
+    public function registerUrls(string $confirmationUrl, string $validationUrl): array
+    {
+        try {
+            $response = $this->client->request(
+                'POST',
+                $this->config->getBaseUrl() . "/mpesa/c2b/v1/registerurl",
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $this->auth->getToken(),
+                    ],
+                    'json' => [
+                        "ShortCode" => $this->config->getShortcode(),
+                        "ResponseType" => "Completed",
+                        "ConfirmationURL" => $confirmationUrl,
+                        "ValidationURL" => $validationUrl
+                    ]
+                ]
+            );
+
+            return json_decode($response->getBody(), true);
+        } catch (\Exception $e) {
+            throw new \RuntimeException('URL registration failed: ' . $e->getMessage(), 0, $e);
+        }
     }
 
     /**
@@ -194,7 +250,6 @@ class Mpesa extends BaseMpesa
         return $this;
     }
 
-
     /**
      * Get the SSL verification flag
      * 
@@ -205,7 +260,6 @@ class Mpesa extends BaseMpesa
         $this->auth->getVerifySSL();
         return $this;
     }
-
 
     /**
      * Set the business shortcode
@@ -219,7 +273,6 @@ class Mpesa extends BaseMpesa
         return $this;
     }
 
-
     /**
      * Get the business shortcode
      * 
@@ -228,5 +281,30 @@ class Mpesa extends BaseMpesa
     public function getShortcode(): string
     {
         return $this->config->getShortcode();
+    }
+
+    /**
+     * Set the HTTP client instance
+     * 
+     * @param Client $client GuzzleHttp client instance
+     * @return self Returns the current instance for method chaining
+     */
+    public function setClient(Client $client): self
+    {
+        $this->client = $client;
+        $this->auth->setClient($client);
+        return $this;
+    }
+
+    /**
+     * Set the initiator name for B2C transactions
+     * 
+     * @param string $initiatorName The name of the initiator
+     * @return self Returns the current instance for method chaining
+     */
+    public function setInitiatorName(string $initiatorName): self
+    {
+        $this->initiatorName = $initiatorName;
+        return $this;
     }
 }

@@ -6,77 +6,86 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
-use GuzzleHttp\Exception\RequestException;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 
-// Mock successful authentication response
-beforeEach(function() {
-    $this->config = new Config([
-        'consumer_key' => 'test_key',
-        'consumer_secret' => 'test_secret',
-        'environment' => 'sandbox'
-    ]);
+beforeEach(function () {
+    $this->config = new Config(
+        'https://apisandbox.safaricom.et',
+        'test_consumer_key',
+        'test_consumer_secret',
+        'test_passkey',
+        '174379',
+        'sandbox'
+    );
 });
 
-test('authentication can be instantiated with config', function() {
+test('authentication can generate basic auth', function () {
     $auth = new Authentication($this->config);
-    expect($auth)->toBeInstanceOf(Authentication::class);
+    $basicAuth = $auth->generateBasicAuth();
+
+    expect($basicAuth)->toBeString()
+        ->and($basicAuth)->toStartWith('Basic ');
 });
 
-test('authentication successfully gets access token', function() {
-    // Create a mock response
+test('authentication can get access token', function () {
+    // Mock successful API response
     $mock = new MockHandler([
-        new Response(200, [], json_encode(['access_token' => 'test_token']))
+        new Response(200, [], json_encode([
+            'access_token' => 'test_access_token',
+            'expires_in' => '3599'
+        ]))
     ]);
-    
+
     $handlerStack = HandlerStack::create($mock);
     $client = new Client(['handler' => $handlerStack]);
-    
+
     $auth = new Authentication($this->config);
-    $result = $auth->authenticate();
-    
-    expect($result)->toBeInstanceOf(Authentication::class)
-        ->and($auth->hasToken())->toBeTrue()
-        ->and($auth->getToken())->toBe('test_token');
+    $auth->setClient($client);
+    $token = $auth->authenticate();
+
+    expect($token)->toBeString()
+        ->and($token)->toBe('test_access_token');
 });
 
-test('authentication throws exception on invalid response', function() {
-    // Create a mock response with invalid data
+test('authentication handles api errors', function () {
+    // Mock error response
     $mock = new MockHandler([
-        new Response(200, [], json_encode(['invalid_key' => 'value']))
+        new Response(401, [], json_encode([
+            'errorCode' => '999991',
+            'errorMessage' => 'Invalid client id'
+        ]))
     ]);
-    
+
     $handlerStack = HandlerStack::create($mock);
     $client = new Client(['handler' => $handlerStack]);
-    
+
     $auth = new Authentication($this->config);
-    
-    expect(fn() => $auth->authenticate())
-        ->toThrow(RuntimeException::class, 'Failed to get access token from response');
+    $auth->setClient($client);
+
+    expect(fn() => $auth->authenticate())->toThrow(MpesaException::class);
 });
 
-test('getToken throws exception when not authenticated', function() {
-    $auth = new Authentication($this->config);
-    
-    expect(fn() => $auth->getToken())
-        ->toThrow(RuntimeException::class, 'No access token available. Call authenticate() first.');
-});
-
-test('hasToken returns false when not authenticated', function() {
-    $auth = new Authentication($this->config);
-    expect($auth->hasToken())->toBeFalse();
-});
-
-test('authentication handles network errors gracefully', function() {
-    // Create a mock that simulates a network error
+test('authentication caches token', function () {
+    // Mock successful API response
     $mock = new MockHandler([
-        new RequestException('Network error', new \GuzzleHttp\Psr7\Request('GET', 'test'))
+        new Response(200, [], json_encode([
+            'access_token' => 'test_access_token',
+            'expires_in' => '3599'
+        ]))
     ]);
-    
+
     $handlerStack = HandlerStack::create($mock);
     $client = new Client(['handler' => $handlerStack]);
-    
+
     $auth = new Authentication($this->config);
-    
-    expect(fn() => $auth->authenticate())
-        ->toThrow(RuntimeException::class, 'Authentication failed: Network error');
-}); 
+    $auth->setClient($client);
+
+    // First call should make an API request
+    $token1 = $auth->authenticate();
+
+    // Second call should return cached token
+    $token2 = $auth->authenticate();
+
+    expect($token1)->toBe($token2)
+        ->and($token1)->toBe('test_access_token');
+});

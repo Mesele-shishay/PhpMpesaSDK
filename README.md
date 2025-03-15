@@ -1,147 +1,292 @@
-# M-PESA Account Balance API Implementation
+# PHP M-Pesa Integration SDK
 
-This implementation provides a simple way to interact with the M-PESA Account Balance API. It allows businesses to programmatically check the balance of their M-PESA accounts in real-time.
+A PHP SDK for seamless integration with Safaricom's M-Pesa payment services. This package provides an easy-to-use interface for implementing M-Pesa payment functionalities in your PHP applications.
 
 ## Features
 
-- Query M-PESA account balance
-- Handle asynchronous responses
-- Parse account balance results
-- Error handling
-- Type-safe implementation
-- Trait-based implementation for easy integration
+✨ Simple and intuitive API with fluent interface
+✨ Comprehensive M-Pesa operations support
+✨ Robust error handling
+✨ Type-safe implementation
+✨ Well-documented codebase
+✨ Production-ready security measures
 
 ## Requirements
 
-- PHP 7.4 or higher
-- curl extension
-- json extension
+- PHP >= 7.4
+- Composer
+- GuzzleHTTP ^7.0
+- vlucas/phpdotenv ^5.6
+- M-Pesa API credentials (Consumer Key and Consumer Secret)
+- SSL enabled web server (for production)
 
-## Installation
+## Quick Start
 
-1. Add this package to your project:
+### 1. Installation
 
 ```bash
-composer require your-vendor/mpesa-account-balance
+composer require mesa-sdk/php-mpesa-sdk
 ```
 
-2. Include the autoloader in your PHP script:
+### 2. Basic Setup
 
-```php
-require_once 'vendor/autoload.php';
+Create a `.env` file in your project root:
+
+```env
+MPESA_ENVIRONMENT=sandbox  # or production
+MPESA_CONSUMER_KEY=your_consumer_key
+MPESA_CONSUMER_SECRET=your_consumer_secret
+MPESA_SHORTCODE=your_shortcode
+MPESA_BASE_URL=https://sandbox.safaricom.co.ke
 ```
 
-## Usage
-
-### Basic Usage
+### 3. Initialize the SDK
 
 ```php
-use MPesa\MPesa;
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
 
-// Initialize with your credentials
-$mpesa = new MPesa(
-    'your-initiator-name',
-    'your-security-credential',
-    'your-party-a',
-    'https://your-domain.com/timeout',
-    'https://your-domain.com/result'
-);
+// Create configuration with fluent interface
+$config = new Config();
+$config->setBaseUrl(getenv('MPESA_BASE_URL'))
+    ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
+    ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
+    ->setEnvironment(getenv('MPESA_ENVIRONMENT'))
+    ->setShortCode(getenv('MPESA_SHORTCODE'))
+    ->setVerifySSL(true);  // Set to false for sandbox testing
 
-// Query account balance
+// Initialize Mpesa
+$mpesa = new Mpesa($config);
+
+// Optional: Configure additional settings if needed
+$mpesa->setPassKey('your-pass-key')  // For STK Push
+    ->setInitiatorPassword('your-password')  // For B2C/B2B
+    ->setTimeout(30);  // Request timeout in seconds
+```
+
+## Common Use Cases
+
+### 1. STK Push (Lipa Na M-Pesa Online)
+
+```php
 try {
-    $response = $mpesa->queryAccountBalance('your-bearer-token');
-    print_r($response);
+    $response = $mpesa->authenticate()
+        ->setPhoneNumber('254712345678')
+        ->setAmount(100)
+        ->setAccountReference('INV001')
+        ->setTransactionDesc('Payment for service')
+        ->setCallbackUrl('https://your-domain.com/callback')
+        ->initiateSTKPush();
+
+    // Handle successful initiation
+    $checkoutRequestId = $response['CheckoutRequestID'];
+
+} catch (MpesaException $e) {
+    // Handle M-Pesa specific errors
+    echo $e->getMessage();
 } catch (\Exception $e) {
-    echo "Error: " . $e->getMessage();
+    // Handle general errors
+    echo $e->getMessage();
 }
 ```
 
-### Using the Trait in Your Own Class
-
-You can also use the trait in your own class:
+### 2. B2C Payment (Business to Customer)
 
 ```php
-use MPesa\Traits\HasAccountBalance;
+try {
+    $response = $mpesa->authenticate()  // Always authenticate first
+        ->setInitiatorName('John Doe')
+        ->setSecurityCredential('your-credential')
+        ->setCommandId('SalaryPayment')
+        ->setAmount(1000)
+        ->setPartyA('600000')
+        ->setPartyB('254712345678')
+        ->setRemarks('Salary payment')
+        ->setOccasion('July Salary')
+        ->setTimeoutUrl('https://your-domain.com/timeout')
+        ->setResultUrl('https://your-domain.com/result')
+        ->sendB2C();
 
-class YourClass
-{
-    use HasAccountBalance;
+    // Handle successful initiation
+    $conversationId = $response['ConversationID'];
 
-    public function __construct()
-    {
-        $this->initializeAccountBalance(
-            'your-initiator-name',
-            'your-security-credential',
-            'your-party-a',
-            'https://your-domain.com/timeout',
-            'https://your-domain.com/result'
-        );
-    }
+} catch (MpesaException $e) {
+    echo $e->getMessage();
 }
 ```
 
-### Handling Callback Results
-
-When M-PESA sends the final result to your ResultURL, you can parse it using:
+### 3. Register URLs for Callbacks
 
 ```php
-$balances = $mpesa->parseBalanceResult($callbackResult);
-print_r($balances);
-```
+try {
+    $response = $mpesa->register(
+        shortCode: '600000',
+        responseType: 'Completed',
+        confirmationUrl: 'https://your-domain.com/confirmation',
+        validationUrl: 'https://your-domain.com/validation'
+    );
 
-## Response Format
+    // Handle successful registration
+    echo "URLs registered successfully";
 
-The initial response will be in the format:
-
-```json
-{
-  "OriginatorConversationID": "2c22-4733-b801-a1eaa3f9763c",
-  "ConversationID": "AG_20240211_70101d5c7e1c4fbf514f",
-  "ResponseCode": "0",
-  "ResponseDescription": "Accept the service request successfully."
+} catch (MpesaException $e) {
+    echo $e->getMessage();
 }
 ```
 
-The callback result will be parsed into an array of account balances:
+## Handling Callbacks
+
+Create callback endpoints in your application:
 
 ```php
-[
-    [
-        'accountName' => 'Working Account',
-        'currency' => 'ETB',
-        'availableBalance' => '0.00',
-        'reservedAmount' => '0.00',
-        'unClearedBalance' => '0.00',
-        'totalBalance' => '0.00'
-    ],
-    // ... more accounts
-]
+// callback.php
+<?php
+
+$callbackData = file_get_contents('php://input');
+$response = json_decode($callbackData, true);
+
+// Validate the transaction
+if ($response['ResultCode'] === 0) {
+    // Transaction successful
+    $amount = $response['Amount'];
+    $mpesaReceiptNumber = $response['MpesaReceiptNumber'];
+    $phoneNumber = $response['PhoneNumber'];
+
+    // Update your database
+    // Send confirmation to user
+    // etc.
+} else {
+    // Handle failed transaction
+    $errorMessage = $response['ResultDesc'];
+}
+
+// Always respond to M-Pesa
+header('Content-Type: application/json');
+echo json_encode([
+    "ResultCode" => 0,
+    "ResultDesc" => "Confirmation received successfully"
+]);
 ```
+
+## Security Best Practices
+
+1. **Environment Variables**
+
+   - Never hardcode credentials
+   - Use .env files or secure secrets management
+   - Keep .env file in .gitignore
+
+2. **Production Settings**
+
+   ```php
+   $config->setEnvironment('production')
+          ->setSecureSSL(true);
+   ```
+
+3. **Callback Security**
+   - Validate all incoming data
+   - Use HTTPS for callbacks
+   - Implement IP whitelisting
+   - Log all transactions
 
 ## Error Handling
 
-The implementation throws exceptions for:
+```php
+try {
+    // M-Pesa operations
+} catch (MpesaException $e) {
+    // Log the error
+    error_log($e->getMessage());
 
-- cURL errors
-- API errors (HTTP 4xx, 5xx responses)
-- Invalid response formats
-- Missing configuration
+    // Get detailed error info
+    $errorCode = $e->getCode();
+    $errorMessage = $e->getMessage();
+    $errorResponse = $e->getResponse();
 
-## Security
+    // Handle the error appropriately
+    // e.g., notify admin, retry transaction, etc.
+}
+```
 
-- Never commit your security credentials to version control
-- Use environment variables or a secure configuration management system
-- Ensure your callback URLs use HTTPS
-- Validate all incoming callback data
+## Testing
 
-## License
+For sandbox testing, use these test credentials:
 
-MIT License
+- Phone Number: 254708374149
+- Amount: Any amount
+- Shortcode: 174379
+
+```php
+// Set sandbox environment
+$config->setEnvironment('sandbox');
+```
+
+## Support
+
+- [Create an Issue](https://github.com/yourusername/php-mpesa-sdk/issues)
+- [Documentation](https://your-documentation-url.com)
+- Email: your.support@email.com
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-```
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Directory Structure
 
 ```
+├── examples/
+│   ├── AuthExample.php
+│   ├── B2CExample.php
+│   ├── B2CCallbackExample.php
+│   ├── RegisterUrlExample.php
+│   ├── STKPushExample.php
+│   └── STKPushCallbackExample.php
+├── vendor/
+├── composer.json
+└── README.md
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+[Add your license information here]
+
+## Support
+
+For support and queries, please [create an issue](link-to-issues) or contact [your-contact-information].
+
+## Disclaimer
+
+This is example code for demonstration purposes. Ensure proper testing and security measures before using in a production environment.
+
+# M-PESA SDK for PHP
+
+A comprehensive PHP SDK for Safaricom's M-PESA API integration, featuring a fluent interface, robust error handling, and comprehensive documentation.
+
+## Features
+
+- Account Balance Query
+- Handle asynchronous responses
+- Parse account balance results
+- Robust error handling
+- Type-safe implementation
+- PSR-4 compliant
+- Comprehensive test coverage
+- Modern PHP practices
+
+## Requirements
+
+- PHP >= 7.4
+- GuzzleHTTP ^7.0
+- vlucas/phpdotenv ^5.6
+
+## Installation
+
+Install the package via Composer:

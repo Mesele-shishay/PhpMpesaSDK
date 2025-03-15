@@ -31,9 +31,29 @@ class Config
     /** @var string Environment type ('sandbox' or 'production') */
     private string $environment;
 
-
     /** @var bool Whether to verify SSL certificates */
     private bool $verify_ssl;
+
+    /** @var string Directory for storing log files */
+    private string $log_dir;
+
+    /** @var bool Whether to log to file */
+    private bool $log_to_file;
+
+    /** @var bool Whether to log to console */
+    private bool $log_to_console;
+
+    /** @var string Minimum log level to record */
+    private string $min_log_level;
+
+    /** @var string Custom log format */
+    private ?string $log_format;
+
+    /** @var int Maximum log file size in bytes */
+    private ?int $max_file_size;
+
+    /** @var int Maximum number of log files to keep */
+    private ?int $max_files;
 
     /**
      * Config constructor.
@@ -47,43 +67,136 @@ class Config
      * - MPESA_CONSUMER_SECRET=your_consumer_secret
      * - MPESA_PASSKEY=your_passkey
      * - MPESA_SHORTCODE=your_shortcode
+     * - MPESA_LOG_DIR=logs
+     * - MPESA_LOG_TO_FILE=true
+     * - MPESA_LOG_TO_CONSOLE=false
+     * - MPESA_MIN_LOG_LEVEL=debug
      * 
-     * @param string|null $base_url The base URL for API endpoints (defaults to sandbox environment)
-     * @param string|null $consumer_key The consumer key from M-Pesa developer portal
-     * @param string|null $consumer_secret The consumer secret from M-Pesa developer portal
-     * @param string|null $passkey The passkey for transaction password generation
-     * @param string|null $shortcode The business shortcode/till number/paybill number
-     * @param string|null $environment The environment type ('sandbox' or 'production')
+     * @param string|null $base_url Base URL for the M-Pesa API endpoints
+     * @param string|null $consumer_key Consumer Key from the M-Pesa Developer Portal
+     * @param string|null $consumer_secret Consumer Secret from the M-Pesa Developer Portal
+     * @param string|null $passkey Passkey for generating transaction passwords
+     * @param string|null $shortcode Business Shortcode/Till Number/Paybill Number
+     * @param string|null $environment Environment type ('sandbox' or 'production')
      */
     public function __construct(
-        ?string $base_url = null,
-        ?string $consumer_key = null,
-        ?string $consumer_secret = null,
-        ?string $passkey = null,
-        ?string $shortcode = null,
-        ?string $environment = null,
-        ?bool $verify_ssl = true
+        string $base_url = null,
+        string $consumer_key = null,
+        string $consumer_secret = null,
+        string $passkey = null,
+        string $shortcode = null,
+        string $environment = null
     ) {
-        // Try to load from .env if no parameters are provided and .env file exists
-        if ($this->shouldLoadFromEnv($consumer_key, $consumer_secret, $passkey, $shortcode)) {
+        // Try to load from environment if no parameters provided
+        if ($this->shouldLoadFromEnv($base_url, $consumer_key, $consumer_secret, $passkey, $shortcode, $environment)) {
             $this->loadFromEnv();
         } else {
-            $this->base_url = $base_url ?? "https://apisandbox.safaricom.et";
-            $this->consumer_key = $consumer_key ?? "";
-            $this->consumer_secret = $consumer_secret ?? "";
-            $this->passkey = $passkey ?? "";
-            $this->shortcode = $shortcode ?? "";
-            $this->setEnvironment($environment ?? "sandbox");
+            $this->base_url = $base_url ?? 'https://apisandbox.safaricom.et';
+            $this->consumer_key = $consumer_key ?? '';
+            $this->consumer_secret = $consumer_secret ?? '';
+            $this->passkey = $passkey ?? '';
+            $this->shortcode = $shortcode ?? '';
+            $this->environment = $environment ?? 'sandbox';
         }
 
-        $this->verify_ssl = $environment === 'production' ? true : $verify_ssl;
+        $this->verify_ssl = true;
+
+        // Initialize default logging configuration
+        $this->setLoggingConfig([
+            'log_dir' => 'logs',
+            'log_to_file' => true,
+            'log_to_console' => false,
+            'min_log_level' => 'debug',
+            'log_format' => null,
+            'max_file_size' => null,
+            'max_files' => null
+        ]);
+    }
+
+    /**
+     * Validate the configuration
+     * 
+     * @throws \InvalidArgumentException When required parameters are missing or invalid
+     */
+    public function validate(): void
+    {
+        if (empty($this->consumer_key)) {
+            throw new \InvalidArgumentException('Consumer Key is required');
+        }
+
+        if (empty($this->consumer_secret)) {
+            throw new \InvalidArgumentException('Consumer Secret is required');
+        }
+
+        if (!in_array($this->environment, ['sandbox', 'production'])) {
+            throw new \InvalidArgumentException('Environment must be either "sandbox" or "production"');
+        }
+    }
+
+    /**
+     * Set logging configuration
+     * 
+     * @param array $config Logging configuration array with the following keys:
+     *                     - log_dir: Directory for storing log files (default: 'logs')
+     *                     - log_to_file: Whether to log to file (default: true)
+     *                     - log_to_console: Whether to log to console (default: false)
+     *                     - min_log_level: Minimum log level to record (default: 'debug')
+     *                     - log_format: Custom log format (default: null)
+     *                     - max_file_size: Maximum log file size in bytes (default: null)
+     *                     - max_files: Maximum number of log files to keep (default: null)
+     * @return self
+     */
+    public function setLoggingConfig(array $config): self
+    {
+        // Define default values
+        $defaults = [
+            'log_dir' => 'logs',
+            'log_to_file' => true,
+            'log_to_console' => false,
+            'min_log_level' => 'debug',
+            'log_format' => null,
+            'max_file_size' => null,
+            'max_files' => null
+        ];
+
+        // Merge provided config with defaults
+        $mergedConfig = array_merge($defaults, $config);
+
+        // Set the properties
+        $this->log_dir = $mergedConfig['log_dir'];
+        $this->log_to_file = $mergedConfig['log_to_file'];
+        $this->log_to_console = $mergedConfig['log_to_console'];
+        $this->min_log_level = $mergedConfig['min_log_level'];
+        $this->log_format = $mergedConfig['log_format'];
+        $this->max_file_size = $mergedConfig['max_file_size'];
+        $this->max_files = $mergedConfig['max_files'];
+
+        return $this;
+    }
+
+    /**
+     * Get logging configuration
+     * 
+     * @return array Current logging configuration
+     */
+    public function getLoggingConfig(): array
+    {
+        return [
+            'log_dir' => $this->log_dir,
+            'log_to_file' => $this->log_to_file,
+            'log_to_console' => $this->log_to_console,
+            'min_log_level' => $this->min_log_level,
+            // Add any additional logging configuration that might have been set
+            'log_format' => $this->log_format ?? null,
+            'max_file_size' => $this->max_file_size ?? null,
+            'max_files' => $this->max_files ?? null
+        ];
     }
 
     public function getVerifySSL(): bool
     {
         return $this->verify_ssl;
     }
-
 
     public function setVerifySSL(bool $verify_ssl): self
     {
@@ -93,46 +206,34 @@ class Config
 
     /**
      * Check if configuration should be loaded from environment variables
-     * 
-     * @param string|null ...$params Configuration parameters to check
-     * @return bool True if should load from env, false otherwise
      */
-    private function shouldLoadFromEnv(?string ...$params): bool
+    private function shouldLoadFromEnv(...$params): bool
     {
-        // Check if all parameters are null and .env file exists
-        return empty(array_filter($params, fn($param) => $param !== null)) &&
-            file_exists(getcwd() . '/.env');
+        return empty(array_filter($params, fn($param) => !is_null($param)));
     }
 
     /**
      * Load configuration from environment variables
-     * 
-     * @return void
      */
     private function loadFromEnv(): void
     {
-        try {
+        if (file_exists(getcwd() . '/.env')) {
             $dotenv = Dotenv::createImmutable(getcwd());
-            $dotenv->safeLoad();
-
-            // Set environment first as it affects base_url
-            $this->setEnvironment(
-                $_ENV['MPESA_ENVIRONMENT'] ?? 'sandbox'
-            );
-
-            // The base_url is automatically set by setEnvironment()
-            $this->consumer_key = $_ENV['MPESA_CONSUMER_KEY'] ?? '';
-            $this->consumer_secret = $_ENV['MPESA_CONSUMER_SECRET'] ?? '';
-            $this->passkey = $_ENV['MPESA_PASSKEY'] ?? '';
-            $this->shortcode = $_ENV['MPESA_SHORTCODE'] ?? '';
-        } catch (\Exception $e) {
-            // Fallback to default values if loading fails
-            $this->setEnvironment('sandbox');
-            $this->consumer_key = '';
-            $this->consumer_secret = '';
-            $this->passkey = '';
-            $this->shortcode = '';
+            $dotenv->load();
         }
+
+        $this->base_url = $_ENV['MPESA_BASE_URL'] ?? 'https://apisandbox.safaricom.et';
+        $this->consumer_key = $_ENV['MPESA_CONSUMER_KEY'] ?? '';
+        $this->consumer_secret = $_ENV['MPESA_CONSUMER_SECRET'] ?? '';
+        $this->passkey = $_ENV['MPESA_PASSKEY'] ?? '';
+        $this->shortcode = $_ENV['MPESA_SHORTCODE'] ?? '';
+        $this->environment = $_ENV['MPESA_ENVIRONMENT'] ?? 'sandbox';
+
+        // Load logging configuration from environment
+        $this->log_dir = $_ENV['MPESA_LOG_DIR'] ?? 'logs';
+        $this->log_to_file = filter_var($_ENV['MPESA_LOG_TO_FILE'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
+        $this->log_to_console = filter_var($_ENV['MPESA_LOG_TO_CONSOLE'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        $this->min_log_level = $_ENV['MPESA_MIN_LOG_LEVEL'] ?? 'debug';
     }
 
     /**
@@ -305,7 +406,11 @@ class Config
                 'MPESA_CONSUMER_KEY' => 'consumer_key',
                 'MPESA_CONSUMER_SECRET' => 'consumer_secret',
                 'MPESA_PASSKEY' => 'passkey',
-                'MPESA_SHORTCODE' => 'shortcode'
+                'MPESA_SHORTCODE' => 'shortcode',
+                'MPESA_LOG_DIR' => 'log_dir',
+                'MPESA_LOG_TO_FILE' => 'log_to_file',
+                'MPESA_LOG_TO_CONSOLE' => 'log_to_console',
+                'MPESA_MIN_LOG_LEVEL' => 'min_log_level'
             ];
 
             // Convert environment key to property name

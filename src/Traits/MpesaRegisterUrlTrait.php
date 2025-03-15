@@ -4,6 +4,7 @@ namespace MesaSDK\PhpMpesa\Traits;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use MesaSDK\PhpMpesa\Responses\MpesaResponse;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 
 trait MpesaRegisterUrlTrait
 {
@@ -47,7 +48,8 @@ trait MpesaRegisterUrlTrait
      * @param string $confirmationUrl The confirmation URL (must be HTTPS)
      * @param string $validationUrl The validation URL (must be HTTPS)
      * @param string $commandId The command ID (default: RegisterURL)
-     * @return MpesaResponse Response object containing response details
+     * @return MpesaResponse The API response
+     * @throws MpesaException When any error occurs during the process
      */
     public function register(
         string $shortCode,
@@ -57,9 +59,7 @@ trait MpesaRegisterUrlTrait
         string $commandId = 'RegisterURL'
     ): MpesaResponse {
         // Validate input parameters
-        if (!$this->validateInputs($shortCode, $responseType, $confirmationUrl, $validationUrl)) {
-            return MpesaResponse::error($this->lastError);
-        }
+        $this->validateInputs($shortCode, $responseType, $confirmationUrl, $validationUrl);
 
         $payload = [
             'ShortCode' => $shortCode,
@@ -74,23 +74,30 @@ trait MpesaRegisterUrlTrait
 
     /**
      * Validate all input parameters
+     * @throws MpesaException When validation fails
      */
     private function validateInputs(
         string $shortCode,
         string $responseType,
         string $confirmationUrl,
         string $validationUrl
-    ): bool {
+    ): void {
         // Validate shortcode (numeric and not empty)
         if (!is_numeric($shortCode) || empty($shortCode)) {
-            $this->lastError = 'Invalid shortcode provided';
-            return false;
+            throw new MpesaException(
+                'Invalid shortcode provided',
+                '1003',
+                ['shortCode' => $shortCode]
+            );
         }
 
         // Validate response type
         if (!in_array($responseType, ['Completed', 'Cancelled'])) {
-            $this->lastError = 'Response type must be either Completed or Cancelled';
-            return false;
+            throw new MpesaException(
+                'Response type must be either Completed or Cancelled',
+                '1003',
+                ['responseType' => $responseType]
+            );
         }
 
         // Validate URLs
@@ -98,29 +105,38 @@ trait MpesaRegisterUrlTrait
             !filter_var($confirmationUrl, FILTER_VALIDATE_URL) ||
             strpos($confirmationUrl, 'https://') !== 0
         ) {
-            $this->lastError = 'Invalid confirmation URL - must be HTTPS';
-            return false;
+            throw new MpesaException(
+                'Invalid confirmation URL - must be HTTPS',
+                '1013',
+                ['confirmationUrl' => $confirmationUrl]
+            );
         }
 
         if (
             !filter_var($validationUrl, FILTER_VALIDATE_URL) ||
             strpos($validationUrl, 'https://') !== 0
         ) {
-            $this->lastError = 'Invalid validation URL - must be HTTPS';
-            return false;
+            throw new MpesaException(
+                'Invalid validation URL - must be HTTPS',
+                '1013',
+                ['validationUrl' => $validationUrl]
+            );
         }
-
-        return true;
     }
 
     /**
      * Make the HTTP request to the M-PESA API
-     * @return MpesaResponse
+     * @return MpesaResponse The API response
+     * @throws MpesaException When any error occurs
      */
     private function makeRequest(array $payload): MpesaResponse
     {
         if (!$this->hasApiKey()) {
-            return MpesaResponse::error('API key not set');
+            throw new MpesaException(
+                'API key not set',
+                '1001',
+                ['error' => 'Missing API key']
+            );
         }
 
         try {
@@ -137,13 +153,45 @@ trait MpesaRegisterUrlTrait
 
             $decodedResponse = json_decode($response->getBody(), true);
             if (!$decodedResponse) {
-                return MpesaResponse::error('Failed to decode API response');
+                throw new MpesaException(
+                    'Failed to decode API response',
+                    '1003',
+                    ['response' => $response->getBody()]
+                );
+            }
+
+            // Check for API error responses
+            if (isset($decodedResponse['resultCode']) && $decodedResponse['resultCode'] !== '0') {
+                throw new MpesaException(
+                    $decodedResponse['resultDesc'] ?? 'API Error',
+                    $decodedResponse['resultCode'],
+                    $decodedResponse
+                );
             }
 
             return new MpesaResponse($decodedResponse);
 
         } catch (GuzzleException $e) {
-            return MpesaResponse::error($e->getMessage());
+            // Try to decode error response if available
+            $errorData = [];
+            if ($e instanceof \GuzzleHttp\Exception\ClientException) {
+                $errorBody = $e->getResponse()->getBody()->getContents();
+                $errorData = json_decode($errorBody, true) ?? [];
+
+                if (isset($errorData['resultDesc'])) {
+                    throw new MpesaException(
+                        $errorData['resultDesc'],
+                        $errorData['resultCode'] ?? '1003',
+                        $errorData
+                    );
+                }
+            }
+
+            throw new MpesaException(
+                $e->getMessage(),
+                '1003',
+                ['error' => $e->getMessage()]
+            );
         }
     }
 
@@ -153,5 +201,16 @@ trait MpesaRegisterUrlTrait
     public function getLastError(): ?string
     {
         return $this->lastError;
+    }
+
+    /**
+     * Get the response description from an API response
+     * 
+     * @param MpesaResponse $response The API response
+     * @return string The response description
+     */
+    public function getResponseDescription(MpesaResponse $response): string
+    {
+        return $response->getResponseMessage();
     }
 }

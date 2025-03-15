@@ -2,7 +2,7 @@
 
 namespace MesaSDK\PhpMpesa\Traits;
 
-use MesaSDK\PhpMpesa\MpesaException;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 use MesaSDK\PhpMpesa\Responses\MpesaResponse;
 
 trait B2CTrait
@@ -62,6 +62,50 @@ trait B2CTrait
     protected ?string $occasion = null;
 
     /**
+     * Array of B2C result codes and their descriptions
+     * @var array
+     */
+    private array $b2cResultCodes = [
+        0 => 'Success',
+        1 => 'Internal Server Error',
+        2 => 'Unauthorized',
+        3 => 'Invalid initiator name',
+        4 => 'Invalid security credential',
+        5 => 'Invalid command ID',
+        6 => 'Invalid party A',
+        7 => 'Invalid party B',
+        8 => 'Invalid amount',
+        9 => 'Invalid remarks',
+        10 => 'Invalid occasion',
+        11 => 'Invalid URL',
+        12 => 'Invalid queue timeout URL',
+        13 => 'Invalid result URL',
+        14 => 'Invalid transaction type',
+        15 => 'Duplicate transaction',
+        16 => 'Insufficient balance',
+        17 => 'Invalid phone number',
+        18 => 'Unregistered phone number',
+        19 => 'Inactive phone number',
+        20 => 'Blocked phone number',
+        21 => 'Transaction limit exceeded',
+        22 => 'Daily limit exceeded',
+        23 => 'Weekly limit exceeded',
+        24 => 'Monthly limit exceeded',
+        25 => 'Invalid transaction',
+        26 => 'Transaction expired',
+        27 => 'Transaction cancelled',
+        28 => 'Transaction failed',
+        29 => 'Request cancelled',
+        30 => 'Request timeout',
+        31 => 'Request not found',
+        32 => 'System error',
+        33 => 'Invalid request',
+        34 => 'Invalid parameters',
+        35 => 'Invalid response',
+        36 => 'Invalid status',
+    ];
+
+    /**
      * Set the initiator name
      *
      * @param string $initiatorName
@@ -77,9 +121,9 @@ trait B2CTrait
      * Set the security credential
      *
      * @param string $securityCredential
-     * @return self
+     * @return \MesaSDK\PhpMpesa\Base\BaseMpesa
      */
-    public function setSecurityCredential(string $securityCredential): self
+    public function setSecurityCredential(string $securityCredential): \MesaSDK\PhpMpesa\Base\BaseMpesa
     {
         $this->securityCredential = $securityCredential;
         return $this;
@@ -89,12 +133,18 @@ trait B2CTrait
      * Set the command ID
      *
      * @param string $commandId
-     * @return self
+     * @return \MesaSDK\PhpMpesa\Base\BaseMpesa
      * @throws MpesaException
      */
-    public function setCommandID(string $commandId): self
+    public function setCommandID(string $commandId): \MesaSDK\PhpMpesa\Base\BaseMpesa
     {
-        $this->validateB2CParameters($commandId);
+        $validCommands = ['BusinessPayment', 'SalaryPayment', 'PromotionPayment'];
+        if (!in_array($commandId, $validCommands)) {
+            throw new MpesaException(
+                'Invalid CommandID. Must be one of: ' . implode(', ', $validCommands),
+                400
+            );
+        }
         $this->commandID = $commandId;
         return $this;
     }
@@ -306,8 +356,8 @@ trait B2CTrait
         string $partyB,
         string $remarks,
         string $occasion,
-        ?string $queueTimeOutURL = null,
-        ?string $resultURL = null
+        string $queueTimeOutURL = null,
+        string $resultURL = null
     ): MpesaResponse {
         return $this->setInitiatorName($initiatorName)
             ->setSecurityCredential($securityCredential)
@@ -338,24 +388,6 @@ trait B2CTrait
     }
 
     /**
-     * Validates the B2C command ID
-     *
-     * @param string $commandId The command ID to validate
-     * @throws MpesaException
-     */
-    private function validateB2CParameters(string $commandId): void
-    {
-        $validCommandIds = ['BusinessPayment', 'SalaryPayment', 'PromotionPayment'];
-
-        if (!in_array($commandId, $validCommandIds)) {
-            throw new MpesaException(
-                'Invalid CommandID. Must be one of: ' . implode(', ', $validCommandIds),
-                400
-            );
-        }
-    }
-
-    /**
      * Generates a unique originator conversation ID
      *
      * @return string
@@ -363,5 +395,286 @@ trait B2CTrait
     private function generateOriginatorConversationId(): string
     {
         return uniqid('MPESA-B2C-', true);
+    }
+
+    /**
+     * Process the B2C callback response
+     * 
+     * @param array|null $callbackData The callback data received from M-Pesa
+     * @return self Returns the current instance for method chaining
+     * @throws \InvalidArgumentException When callback data is null or invalid
+     */
+    public function processB2CCallback(?array $callbackData = null): self
+    {
+        if ($callbackData === null) {
+            // Get the raw POST data if no data was passed
+            $rawData = file_get_contents('php://input');
+            if (empty($rawData)) {
+                throw new \InvalidArgumentException('No callback data received');
+            }
+
+            $callbackData = json_decode($rawData, true);
+            if (!is_array($callbackData)) {
+                throw new \InvalidArgumentException('Invalid callback data format');
+            }
+        }
+
+        $this->response = $callbackData['Result'] ?? [];
+        return $this;
+    }
+
+    /**
+     * Get the Transaction ID from the B2C callback
+     * 
+     * @return string|null The Transaction ID or null if not available
+     */
+    public function getTransactionId(): ?string
+    {
+        return $this->response['TransactionID'] ?? null;
+    }
+
+    /**
+     * Get the Conversation ID from the B2C callback
+     * 
+     * @return string|null The Conversation ID or null if not available
+     */
+    public function getConversationId(): ?string
+    {
+        return $this->response['ConversationID'] ?? null;
+    }
+
+    /**
+     * Get the Originator Conversation ID from the B2C callback
+     * 
+     * @return string|null The Originator Conversation ID or null if not available
+     */
+    public function getOriginatorConversationId(): ?string
+    {
+        return $this->response['OriginatorConversationID'] ?? null;
+    }
+
+    /**
+     * Get all result parameters from the B2C callback
+     * 
+     * @return array The result parameters or empty array if not available
+     */
+    public function getResultParameters(): array
+    {
+        if (!isset($this->response['ResultParameters']['ResultParameter'])) {
+            return [];
+        }
+
+        $params = [];
+        foreach ($this->response['ResultParameters']['ResultParameter'] as $param) {
+            $params[$param['Key']] = $param['Value'];
+        }
+        return $params;
+    }
+
+    /**
+     * Get the transaction amount from the B2C callback
+     * 
+     * @return float|null The transaction amount or null if not available
+     */
+    public function getTransactionAmount(): ?float
+    {
+        $params = $this->getResultParameters();
+        return isset($params['TransactionAmount']) ? (float) $params['TransactionAmount'] : null;
+    }
+
+    /**
+     * Get the transaction receipt number from the B2C callback
+     * 
+     * @return string|null The transaction receipt number or null if not available
+     */
+    public function getTransactionReceipt(): ?string
+    {
+        $params = $this->getResultParameters();
+        return $params['TransactionReceipt'] ?? null;
+    }
+
+    /**
+     * Get the receiver's name from the B2C callback
+     * 
+     * @return string|null The receiver's name or null if not available
+     */
+    public function getReceiverName(): ?string
+    {
+        $params = $this->getResultParameters();
+        return $params['ReceiverPartyPublicName'] ?? null;
+    }
+
+    /**
+     * Get the transaction completion date and time
+     * 
+     * @return string|null The transaction completion date and time or null if not available
+     */
+    public function getTransactionDateTime(): ?string
+    {
+        $params = $this->getResultParameters();
+        return $params['TransactionCompletedDateTime'] ?? null;
+    }
+
+    /**
+     * Get all available account balances
+     * 
+     * @return array Array containing utility, working, and charges account balances
+     */
+    public function getAccountBalances(): array
+    {
+        $params = $this->getResultParameters();
+        return [
+            'utility' => isset($params['B2CUtilityAccountAvailableFunds']) ?
+                (float) $params['B2CUtilityAccountAvailableFunds'] : null,
+            'working' => isset($params['B2CWorkingAccountAvailableFunds']) ?
+                (float) $params['B2CWorkingAccountAvailableFunds'] : null,
+            'charges' => isset($params['B2CChargesPaidAccountAvailableFunds']) ?
+                (float) $params['B2CChargesPaidAccountAvailableFunds'] : null
+        ];
+    }
+
+    /**
+     * Check if the recipient is a registered M-Pesa customer
+     * 
+     * @return bool|null True if recipient is registered, false if not, null if information not available
+     */
+    public function isRecipientRegistered(): ?bool
+    {
+        $params = $this->getResultParameters();
+        return isset($params['B2CRecipientIsRegisteredCustomer']) ?
+            $params['B2CRecipientIsRegisteredCustomer'] === 'Y' : null;
+    }
+
+    /**
+     * Get detailed error message for a result code
+     * 
+     * @return string Detailed error message
+     */
+    public function getDetailedError(): string
+    {
+        $resultCode = $this->getResultCode();
+        $resultDesc = $this->getResultDesc();
+
+        if ($resultCode === null) {
+            return 'Unknown error occurred';
+        }
+
+        $defaultMessage = $this->b2cResultCodes[$resultCode] ?? 'Unknown error code';
+        return sprintf(
+            'Error Code: %d - %s. %s',
+            $resultCode,
+            $defaultMessage,
+            $resultDesc ? "Details: $resultDesc" : ''
+        );
+    }
+
+    /**
+     * Check if there was a specific type of error
+     * 
+     * @param int $errorCode The error code to check for
+     * @return bool True if the error matches
+     */
+    public function hasError(int $errorCode): bool
+    {
+        return $this->getResultCode() === $errorCode;
+    }
+
+    /**
+     * Check if the error is related to the recipient's phone number
+     * 
+     * @return bool True if the error is phone number related
+     */
+    public function hasPhoneNumberError(): bool
+    {
+        $phoneErrors = [17, 18, 19, 20]; // Phone number related error codes
+        return in_array($this->getResultCode(), $phoneErrors);
+    }
+
+    /**
+     * Check if the error is related to transaction limits
+     * 
+     * @return bool True if the error is limit related
+     */
+    public function hasLimitError(): bool
+    {
+        $limitErrors = [21, 22, 23, 24]; // Transaction limit related error codes
+        return in_array($this->getResultCode(), $limitErrors);
+    }
+
+    /**
+     * Check if the error is related to insufficient balance
+     * 
+     * @return bool True if there was insufficient balance
+     */
+    public function hasInsufficientBalanceError(): bool
+    {
+        return $this->hasError(16);
+    }
+
+    /**
+     * Check if the error is related to invalid credentials
+     * 
+     * @return bool True if there was an authentication/credential error
+     */
+    public function hasCredentialError(): bool
+    {
+        $credentialErrors = [2, 3, 4]; // Authentication related error codes
+        return in_array($this->getResultCode(), $credentialErrors);
+    }
+
+    /**
+     * Check if the error is related to invalid parameters
+     * 
+     * @return bool True if there was a parameter validation error
+     */
+    public function hasValidationError(): bool
+    {
+        $validationErrors = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 34];
+        return in_array($this->getResultCode(), $validationErrors);
+    }
+
+    /**
+     * Check if the error is a system error
+     * 
+     * @return bool True if there was a system error
+     */
+    public function hasSystemError(): bool
+    {
+        $systemErrors = [1, 32, 35, 36];
+        return in_array($this->getResultCode(), $systemErrors);
+    }
+
+    /**
+     * Get a user-friendly error message
+     * 
+     * @return string User-friendly error message
+     */
+    public function getUserFriendlyError(): string
+    {
+        if ($this->hasPhoneNumberError()) {
+            return 'There was an issue with the recipient\'s phone number. Please verify the number and try again.';
+        }
+
+        if ($this->hasLimitError()) {
+            return 'Transaction limit exceeded. Please try a lower amount or try again later.';
+        }
+
+        if ($this->hasInsufficientBalanceError()) {
+            return 'Insufficient balance to complete the transaction.';
+        }
+
+        if ($this->hasCredentialError()) {
+            return 'Authentication failed. Please contact support.';
+        }
+
+        if ($this->hasValidationError()) {
+            return 'Invalid transaction details provided. Please verify all information and try again.';
+        }
+
+        if ($this->hasSystemError()) {
+            return 'A system error occurred. Please try again later or contact support if the problem persists.';
+        }
+
+        return 'An error occurred while processing the transaction. Please try again later.';
     }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "mesele/m-pesa-sdk",
+  "name": "mesa-sdk/php-mpesa-sdk",
   "version": "1.0.0",
   "description": "A PHP SDK for Safaricom's M-Pesa API integration, featuring fluent interface, robust error handling, and comprehensive documentation.",
   "type": "library",
@@ -8,17 +8,17 @@
     "safaricom",
     "payment",
     "mobile-money",
-    "kenya",
+    "ethiopia",
     "africa",
     "payment-gateway",
     "api-integration",
     "php-sdk"
   ],
-  "homepage": "https://github.com/mesele/m-pesa-sdk",
+  "homepage": "https://github.com/Mesele-shishay/PhpMpesaSDK",
   "license": "MIT",
   "authors": [
     {
-      "name": "mesele shishay",
+      "name": "Mesele Shishay",
       "email": "messeleshishaymm@gmail.com",
       "role": "Developer"
     }
@@ -39,8 +39,8 @@
     }
   },
   "scripts": {
-    "test": "phpunit",
-    "test-coverage": "phpunit --coverage-html coverage",
+    "test": "./vendor/bin/pest",
+    "test-coverage": "./vendor/bin/pest --coverage-html coverage",
     "format": "php-cs-fixer fix --allow-risky=yes",
     "analyse": [
       "@php phpstan analyse",
@@ -67,20 +67,24 @@
   "config": {
     "sort-packages": true,
     "allow-plugins": {
-      "dealerdirect/phpcodesniffer-composer-installer": true
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "pestphp/pest-plugin": true
     }
   },
   "minimum-stability": "stable",
   "prefer-stable": true,
   "support": {
-    "issues": "https://github.com/mesele/m-pesa-sdk/issues",
-    "source": "https://github.com/mesele/m-pesa-sdk",
-    "docs": "https://github.com/mesele/m-pesa-sdk/wiki"
+    "issues": "https://github.com/Mesele-shishay/PhpMpesaSDK/issues",
+    "source": "https://github.com/Mesele-shishay/PhpMpesaSDK",
+    "docs": "https://github.com/Mesele-shishay/PhpMpesaSDK/wiki"
   },
   "funding": [
     {
       "type": "github",
-      "url": "https://github.com/sponsors/mesele"
+      "url": "https://github.com/sponsors/Mesele-shishay"
     }
-  ]
+  ],
+  "require-dev": {
+    "pestphp/pest": "^3.7"
+  }
 }

@@ -2,13 +2,14 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 use MesaSDK\PhpMpesa\Authentication;
 use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 
 // Create configuration with your credentials
 $config = new Config();
 
 $config->setEnvironment('sandbox')
-    ->setConsumerKey("7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi")
-    ->setConsumerSecret("zEvvR7yTpNYG1DoH31MKOYOzh0iZ9kdXAK1andjjrqXdnJMTbiUMhnnz5Qf12oNC");
+    ->setConsumerKey("QeZ1WgHxMJCngVLGbsHwMQSmZO7HHnQjGGbeSH3VaKB90fta")
+    ->setConsumerSecret("bM7gNvNTXH7T3IPzUAIYpa4xzlENgGPC4raksDXWt2VvjcquzgD80P3G6cM01BEv");
 
 try {
     // Initialize authentication
@@ -27,8 +28,6 @@ try {
         echo "Expires At: " . $auth->getExpiresAt() . "\n";
     }
 
-} catch (RuntimeException $e) {
-    echo "Error: " . $e->getMessage() . "\n";
-} catch (Exception $e) {
-    echo "Unexpected error: " . $e->getMessage() . "\n";
+} catch (MpesaException $e) {
+    print_r($e->getMessage());
 }

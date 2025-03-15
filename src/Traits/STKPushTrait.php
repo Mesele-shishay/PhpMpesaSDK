@@ -63,7 +63,6 @@ trait STKPushTrait
 
             $this->response = json_decode($response->getBody(), true);
 
-
             if (isset($this->response['ResponseCode']) && $this->response['ResponseCode'] !== '0') {
                 throw MpesaException::fromResponse($this->response);
             }

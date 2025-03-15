@@ -4,6 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use MesaSDK\PhpMpesa\Mpesa;
 use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 
 
 // Create configuration with your credentials
@@ -19,14 +20,13 @@ try {
     $mpesa = new Mpesa($config);
     $mpesa->setApiKey('7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi');
     $response = $mpesa->register(
-        '805500',  // shortCode
+        '805100',  // shortCode
         'Completed',  // responseType
         'https://your-domain.com/confirmation',  // confirmationUrl
         'https://your-domain.com/validation',  // validationUrl
         'RegisterURL'  // commandId (optional)
     );
-    echo $response->isSuccessful();
-
-} catch (Exception $e) {
+    echo $response->getResponseMessage();
+} catch (MpesaException $e) {
     echo "Error: " . $e->getMessage() . "\n";
 }
