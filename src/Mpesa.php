@@ -18,7 +18,7 @@ use MesaSDK\PhpMpesa\Exceptions\MpesaException;
  * 
  * This class provides a comprehensive interface to the M-Pesa payment gateway,
  * supporting operations such as:
- * - STK Push (Lipa Na M-Pesa Online)
+ * - STK Push 251
  * - B2C Payments
  * - URL Registration
  * - Transaction Status Queries

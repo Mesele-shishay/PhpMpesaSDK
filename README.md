@@ -5,7 +5,7 @@ A robust and developer-friendly PHP SDK for integrating M-Pesa payment services 
 ## Features
 
 - 🔒 Secure Authentication
-- 💳 STK Push (Lipa Na M-Pesa Online)
+- 💳 STK Push
 - 💸 B2C Payments
 - 📱 C2B Payments
 - 🔄 Transaction Status Queries
@@ -91,7 +91,7 @@ $config->setEnvironment($_ENV['MPESA_ENVIRONMENT'])
 
 ## Features Documentation
 
-### STK Push (Lipa Na M-Pesa Online)
+### STK Push
 
 ```php
 $mpesa->authenticate()
@@ -126,12 +126,6 @@ $response = $mpesa->authenticate()
         'https://your-domain.com/confirmation',
         'https://your-domain.com/validation'
     );
-```
-
-### Query Transaction Status
-
-```php
-$status = $mpesa->querySTKStatus($checkoutRequestId);
 ```
 
 ## Handling Callbacks
