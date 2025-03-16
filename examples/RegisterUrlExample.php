@@ -20,7 +20,7 @@ try {
     $mpesa = new Mpesa($config);
     $mpesa->setApiKey('7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi');
     $response = $mpesa->register(
-        '805100',  // shortCode
+        '81100',  // shortCode
         'Completed',  // responseType
         'https://your-domain.com/confirmation',  // confirmationUrl
         'https://your-domain.com/validation',  // validationUrl

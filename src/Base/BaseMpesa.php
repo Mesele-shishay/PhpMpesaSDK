@@ -106,6 +106,16 @@ abstract class BaseMpesa implements MpesaInterface
     }
 
     /**
+     * Get the authentication instance
+     * 
+     * @return Authentication
+     */
+    public function getAuth(): Authentication
+    {
+        return $this->auth;
+    }
+
+    /**
      * Get the logger instance
      * 
      * @return MpesaLogger

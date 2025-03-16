@@ -40,52 +40,73 @@ try {
     // 2. Initialize M-Pesa client
     $mpesa = new Mpesa($config);
 
+    // Add debug logging
+    error_log("Attempting authentication...");
+
     // 3. Set up the transaction details
-    $mpesa->authenticate()
-        ->setPhoneNumber('251700404709')  // Customer's phone number (format: 2517XXXXXXXX)
-        ->setAmount(20.00)                // Amount to be charged
-        ->setAccountReference('INV123')   // Your unique transaction reference
-        ->setTransactionDesc('Payment for Monthly Package')  // Description shown to customer
-        ->setCallbackUrl($settings['callback_url']);
+    try {
+        $authResult = $mpesa->authenticate();
+        error_log("Authentication result: " . json_encode($authResult));
 
-    // 4. For sandbox testing only - set test credentials
-    if ($config->getEnvironment() === 'sandbox') {
-        $mpesa->setTestPassword('M2VkZGU2YWY1Y2RhMzIyOWRjMmFkMTRiMjdjOWIwOWUxZDFlZDZiNGQ0OGYyMDRiNjg0ZDZhNWM2NTQyNTk2ZA==');
-    }
+        $mpesa->setPhoneNumber('251700404709')  // Customer's phone number (format: 2517XXXXXXXX)
+            ->setAmount(20.00)                // Amount to be charged
+            ->setAccountReference('INV' . time())   // Dynamic reference
+            ->setTransactionDesc('Payment for Monthly Package')  // Description shown to customer
+            ->setCallbackUrl($settings['callback_url']);
 
-    // 5. Initiate the STK Push
-    $response = $mpesa->initiateSTKPush();
-
-    // 6. Handle the response
-    if ($mpesa->isSuccessful()) {
-        echo "✅ Transaction initiated successfully!\n\n";
-        echo "Transaction Details:\n";
-        echo "-------------------\n";
-        echo "🔖 Merchant Request ID: " . $mpesa->getMerchantRequestID() . "\n";
-        echo "🔖 Checkout Request ID: " . $mpesa->getCheckoutRequestID() . "\n\n";
-
-        // Store these IDs for later use in callback handling
-
-        // 7. Check for callback data (if synchronous)
-        $callbackData = $mpesa->getCallbackData();
-        if (!empty($callbackData)) {
-            echo "Callback Response:\n";
-            echo "----------------\n";
-            print_r($callbackData);
-
-            if ($mpesa->isCanceledByUser()) {
-                echo "❌ Transaction was canceled by the user\n";
-            }
-
-            echo "Result Code: " . $mpesa->getResultCode() . "\n";
-            echo "Result Description: " . $mpesa->getResultDesc() . "\n";
-        } else {
-            echo "ℹ️ Waiting for customer to complete the payment...\n";
-            echo "Check STKPushCallbackExample.php for callback handling\n";
+        // 4. For sandbox testing only - set test credentials
+        if ($config->getEnvironment() === 'sandbox') {
+            // Try without the test password first
+            $mpesa->setTestPassword('M2VkZGU2YWY1Y2RhMzIyOWRjMmFkMTRiMjdjOWIwOWUxZDFlZDZiNGQ0OGYyMDRiNjg0ZDZhNWM2NTQyNTk2ZA==');
         }
-    } else {
-        echo "❌ Transaction initiation failed!\n";
-        echo "Error: " . $mpesa->getResultDesc() . "\n";
+
+        error_log("Initiating STK Push...");
+        // 5. Initiate the STK Push
+        $response = $mpesa->initiateSTKPush();
+        error_log("STK Push Response: " . json_encode($response));
+
+        // 6. Handle the response
+        if ($mpesa->isSuccessful()) {
+            echo "✅ Transaction initiated successfully!\n\n";
+            echo "Transaction Details:\n";
+            echo "-------------------\n";
+            echo "🔖 Merchant Request ID: " . $mpesa->getMerchantRequestID() . "\n";
+            echo "🔖 Checkout Request ID: " . $mpesa->getCheckoutRequestID() . "\n\n";
+
+            // Store these IDs for later use in callback handling
+
+            // 7. Check for callback data (if synchronous)
+            $callbackData = $mpesa->getCallbackData();
+            if (!empty($callbackData)) {
+                echo "Callback Response:\n";
+                echo "----------------\n";
+                print_r($callbackData);
+
+                if ($mpesa->isCanceledByUser()) {
+                    echo "❌ Transaction was canceled by the user\n";
+                }
+
+                echo "Result Code: " . $mpesa->getResultCode() . "\n";
+                echo "Result Description: " . $mpesa->getResultDesc() . "\n";
+            } else {
+                echo "ℹ️ Waiting for customer to complete the payment...\n";
+                echo "Check STKPushCallbackExample.php for callback handling\n";
+            }
+        } else {
+            echo "❌ Transaction initiation failed!\n";
+            echo "Error: " . $mpesa->getResultDesc() . "\n";
+        }
+
+    } catch (MpesaException $e) {
+        echo "❌ M-Pesa API Error: " . $e->getMessage() . "\n";
+        // Log the error for debugging
+        error_log("M-Pesa Error: " . $e->getMessage());
+    } catch (RuntimeException $e) {
+        echo "❌ Runtime Error: " . $e->getMessage() . "\n";
+        error_log("Runtime Error: " . $e->getMessage());
+    } catch (Exception $e) {
+        echo "❌ Unexpected Error: " . $e->getMessage() . "\n";
+        error_log("Unexpected Error: " . $e->getMessage());
     }
 
 } catch (MpesaException $e) {

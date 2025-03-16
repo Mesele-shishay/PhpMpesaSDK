@@ -107,33 +107,6 @@ class Mpesa extends BaseMpesa
         );
     }
 
-    /**
-     * Initiate an STK Push request
-     * 
-     * @return MpesaInterface
-     * @throws MpesaException
-     */
-    public function initiateSTKPush(): MpesaInterface
-    {
-        $this->validateRequiredFields();
-
-        $payload = [
-            'BusinessShortCode' => $this->config->getShortcode(),
-            'Password' => $this->generatePassword(),
-            'Timestamp' => $this->getTimestamp(),
-            'TransactionType' => 'CustomerPayBillOnline',
-            'Amount' => $this->amount,
-            'PartyA' => $this->phoneNumber,
-            'PartyB' => $this->config->getShortcode(),
-            'PhoneNumber' => $this->phoneNumber,
-            'CallBackURL' => $this->callbackUrl,
-            'AccountReference' => $this->accountReference,
-            'TransactionDesc' => $this->transactionDesc
-        ];
-
-        $this->response = $this->executeRequest('POST', '/mpesa/stkpush/v3/processrequest', $payload);
-        return $this;
-    }
 
     /**
      * Query the status of an STK Push transaction
