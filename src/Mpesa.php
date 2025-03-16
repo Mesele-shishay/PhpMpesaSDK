@@ -2,11 +2,16 @@
 namespace MesaSDK\PhpMpesa;
 
 use GuzzleHttp\Client;
+use MesaSDK\PhpMpesa\Models\C2BSimulationResponse;
 use MesaSDK\PhpMpesa\Traits\MpesaRegisterUrlTrait;
 use MesaSDK\PhpMpesa\Traits\STKPushTrait;
+use MesaSDK\PhpMpesa\Traits\C2BValidationTrait;
+use MesaSDK\PhpMpesa\Traits\C2BSimulationTrait;
 use MesaSDK\PhpMpesa\Base\BaseMpesa;
 use MesaSDK\PhpMpesa\Traits\B2CTrait;
 use MesaSDK\PhpMpesa\Traits\CommonTrait;
+use MesaSDK\PhpMpesa\Traits\TransactionStatusTrait;
+use MesaSDK\PhpMpesa\Traits\HasAccountBalance;
 use MesaSDK\PhpMpesa\Contracts\MpesaInterface;
 use MesaSDK\PhpMpesa\Exceptions;
 use MesaSDK\PhpMpesa\Exceptions\MpesaException;
@@ -22,6 +27,7 @@ use MesaSDK\PhpMpesa\Exceptions\MpesaException;
  * - B2C Payments
  * - URL Registration
  * - Transaction Status Queries
+ * - C2B Simulation
  * 
  * Example usage:
  * ```php
@@ -47,11 +53,19 @@ use MesaSDK\PhpMpesa\Exceptions\MpesaException;
  */
 class Mpesa extends BaseMpesa
 {
-    use CommonTrait, STKPushTrait, MpesaRegisterUrlTrait, B2CTrait {
-        CommonTrait::isSuccessful insteadof STKPushTrait, B2CTrait;
-        CommonTrait::getResultCode insteadof STKPushTrait, B2CTrait;
-        CommonTrait::getResultDesc insteadof STKPushTrait, B2CTrait;
-        CommonTrait::getCallbackData insteadof STKPushTrait, B2CTrait;
+    use STKPushTrait,
+    B2CTrait,
+    C2BValidationTrait,
+    C2BSimulationTrait,
+    MpesaRegisterUrlTrait,
+    CommonTrait,
+    TransactionStatusTrait,
+    HasAccountBalance {
+        // Resolve method conflicts
+        CommonTrait::getResultCode insteadof STKPushTrait, B2CTrait, TransactionStatusTrait;
+        CommonTrait::getResultDesc insteadof STKPushTrait, B2CTrait, TransactionStatusTrait;
+        CommonTrait::isSuccessful insteadof STKPushTrait, B2CTrait, TransactionStatusTrait;
+        CommonTrait::getCallbackData insteadof STKPushTrait, B2CTrait, TransactionStatusTrait;
     }
 
     private Client $client;
@@ -365,21 +379,7 @@ class Mpesa extends BaseMpesa
         return $this;
     }
 
-    /**
-     * Set the result URL for B2C transactions
-     * 
-     * @param string $url Valid HTTPS URL
-     * @return self Returns the current instance for method chaining
-     * @throws \InvalidArgumentException If URL is invalid or not HTTPS
-     */
-    public function setResultUrl(string $url): self
-    {
-        if (!filter_var($url, FILTER_VALIDATE_URL) || strpos($url, 'https://') !== 0) {
-            throw new \InvalidArgumentException('Result URL must be a valid HTTPS URL');
-        }
-        $this->resultUrl = $url;
-        return $this;
-    }
+
 
     /**
      * Set the occasion for B2C transactions
@@ -397,17 +397,18 @@ class Mpesa extends BaseMpesa
      * @param string $phone Customer's phone number
      * @param string $reference Account reference
      * @param string $description Transaction description
-     * @return MpesaInterface
+     * @return array Response from the API
      * @throws MpesaException|\InvalidArgumentException
      */
-    public function stkPush(float $amount, string $phone, string $reference, string $description): MpesaInterface
+    public function stkPush(float $amount, string $phone, string $reference, string $description): array
     {
         $this->setAmount($amount)
             ->setPhoneNumber($phone)
             ->setAccountReference($reference)
             ->setTransactionDesc($description);
 
-        return $this->initiateSTKPush();
+        $this->ussdPush();
+        return $this->response;
     }
 
     /**
@@ -420,5 +421,113 @@ class Mpesa extends BaseMpesa
     public function stkQuery(string $checkoutRequestId): array
     {
         return $this->querySTKStatus($checkoutRequestId);
+    }
+
+    /**
+     * Simulate a C2B payment transaction
+     * 
+     * @param float $amount Amount to be paid
+     * @param string $phone Customer's phone number
+     * @param string $billRef Bill reference number
+     * @return C2BSimulationResponse Response from the API
+     * @throws MpesaException
+     * @deprecated Use fluent interface instead: setC2BAmount()->setC2BMsisdn()->setC2BBillRefNumber()->executeC2BSimulation()
+     */
+    public function simulateCustomerPayment(float $amount, string $phone, string $billRef): C2BSimulationResponse
+    {
+        return $this->simulateC2B(
+            'CustomerPayBillOnline',
+            $amount,
+            $phone,
+            $billRef,
+            $this->config->getShortcode()
+        );
+    }
+
+    /**
+     * Execute C2B simulation with previously set parameters
+     * 
+     * @return C2BSimulationResponse
+     * @throws MpesaException If required parameters are not set
+     */
+    public function executeC2BSimulation(): C2BSimulationResponse
+    {
+        return $this->simulateC2B(
+            $this->c2bCommandId,
+            $this->c2bAmount,
+            $this->c2bMsisdn,
+            $this->c2bBillRefNumber,
+            $this->config->getShortcode()
+        );
+    }
+
+    protected function getBearerToken(): string
+    {
+        return $this->auth->getToken();
+    }
+
+    protected function getQueueTimeoutUrl(): string
+    {
+        return $this->timeoutUrl ?? '';
+    }
+
+    protected function getResultUrl(): string
+    {
+        return $this->resultUrl ?? '';
+    }
+
+    protected function getSecurityCredential(): string
+    {
+        return $this->securityCredential ?? '';
+    }
+
+    protected function executeRequest(string $method, string $endpoint, array $payload): array
+    {
+        try {
+            // Ensure we have a valid access token
+            if ($this->auth->isExpired()) {
+                $this->authenticate();
+            }
+
+            $response = $this->auth->makeRequest($method, $endpoint, $payload);
+
+            // If response contains resultDesc, return just that for error cases
+            if (isset($response['resultDesc']) && isset($response['resultCode']) && $response['resultCode'] !== '0') {
+                return ['ResponseCode' => $response['resultCode'], 'ResponseDescription' => $response['resultDesc']];
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            throw new MpesaException($e->getMessage());
+        }
+    }
+
+    public function setAccountBalanceInitiator(string $initiator): self
+    {
+        $this->accountBalanceInitiator = $initiator;
+        return $this;
+    }
+
+    public function setAccountBalancePartyA(string $partyA): self
+    {
+        $this->accountBalancePartyA = $partyA;
+        return $this;
+    }
+
+    public function setQueueTimeOutUrl(?string $url): BaseMpesa
+    {
+        $this->queueTimeOutUrl = $url;
+        return $this;
+    }
+
+    public function setResultUrl(?string $url): BaseMpesa
+    {
+        $this->resultUrl = $url;
+        return $this;
+    }
+
+    protected function makeRequest(string $endpoint, array $payload): array
+    {
+        return $this->executeRequest('POST', $endpoint, $payload);
     }
 }

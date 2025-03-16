@@ -8,10 +8,12 @@ use MesaSDK\PhpMpesa\Contracts\MpesaInterface;
 use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 use MesaSDK\PhpMpesa\Logging\MpesaLogger;
 use MesaSDK\PhpMpesa\Traits\HttpClientTrait;
+use MesaSDK\PhpMpesa\Traits\B2CTrait;
 
 abstract class BaseMpesa implements MpesaInterface
 {
     use HttpClientTrait;
+    use B2CTrait;
 
     /** @var Authentication The authentication instance */
     protected Authentication $auth;
@@ -40,14 +42,14 @@ abstract class BaseMpesa implements MpesaInterface
     /** @var array|null The response from the API request */
     protected ?array $response = null;
 
-    /** @var string|null The name of the initiator */
-    protected ?string $initiatorName = null;
+    /** @var string The command ID for B2C transactions */
+    protected string $commandID = 'BusinessPayment';
 
     /** @var string|null The security credential */
     protected ?string $securityCredential = null;
 
-    /** @var string The command ID for B2C transactions */
-    protected string $commandID = 'BusinessPayment';
+    /** @var string|null The name of the initiator */
+    protected ?string $initiatorName = null;
 
     /**
      * BaseMpesa constructor.
@@ -149,7 +151,7 @@ abstract class BaseMpesa implements MpesaInterface
 
     public function setCallbackUrl(string $url): self
     {
-        if (!filter_var($url, FILTER_VALIDATE_URL) || !str_starts_with($url, 'https://')) {
+        if (!filter_var($url, FILTER_VALIDATE_URL) || strpos($url, 'https://') !== 0) {
             $this->logger->warning('Invalid callback URL', ['url' => $url]);
             throw new \InvalidArgumentException('Callback URL must be a valid HTTPS URL');
         }
@@ -296,49 +298,40 @@ abstract class BaseMpesa implements MpesaInterface
     }
 
     /**
-     * Execute an API request with authentication and retry logic
-     *
+     * Execute an API request
+     * 
      * @param string $method HTTP method
      * @param string $endpoint API endpoint
      * @param array $payload Request payload
-     * @return array Response data
+     * @return array|string Response from the API
      * @throws MpesaException
      */
-    protected function executeRequest(string $method, string $endpoint, array $payload = []): array
+    protected function executeRequest(string $method, string $endpoint, array $payload): array|string
     {
-        // Ensure we have a valid authentication token
-        $token = $this->auth->authenticate();
-
-        $url = $this->config->getBaseUrl() . $endpoint;
-        $options = [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $token,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ],
-            'json' => $payload
-        ];
-
-        // Log the API request
-        $this->logApiRequest($endpoint, $payload, $options['headers']);
-
         try {
-            $response = $this->executeWithRetry(
-                $this->auth->getHttpClient(),
-                $method,
-                $url,
-                $options,
-                $this->config
-            );
+            // Ensure we have a valid access token
+            if ($this->auth->isExpired()) {
+                $this->authenticate();
+            }
 
-            // Log the API response
-            $this->logApiResponse($endpoint, $response, 200);
+            $response = $this->auth->makeRequest($method, $endpoint, $payload);
+
+            // If response contains resultDesc, return just that for error cases
+            if (isset($response['resultDesc']) && isset($response['resultCode']) && $response['resultCode'] !== '0') {
+                return $response['resultDesc'];
+            }
 
             return $response;
-        } catch (MpesaException $e) {
-            // Log the error response
-            $this->logApiResponse($endpoint, $e->getMessage(), $e->getCode());
-            throw $e;
+        } catch (\Exception $e) {
+            throw new MpesaException($e->getMessage());
         }
     }
+
+    abstract public function setAccountBalanceInitiator(string $initiator): self;
+    abstract public function setAccountBalancePartyA(string $partyA): self;
+    abstract public function setAccountBalanceRemarks(string $remarks): self;
+    abstract public function setAccountBalanceIdentifierType(string $identifierType): self;
+    abstract public function checkAccountBalance(): array;
+    abstract public function setQueueTimeOutUrl(string $url): self;
+    abstract public function setResultUrl(string $url): self;
 }

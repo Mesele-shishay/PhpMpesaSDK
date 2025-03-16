@@ -2,7 +2,7 @@
 
 namespace MesaSDK\PhpMpesa\Responses;
 
-class MpesaResponse
+class MpesaResponse implements \ArrayAccess
 {
     private array $rawResponse;
     private int $responseCode;
@@ -26,10 +26,11 @@ class MpesaResponse
     private function parseResponse(): void
     {
         $header = $this->rawResponse['header'] ?? [];
+        $data = $this->rawResponse['data'] ?? [];
 
-        $this->responseCode = $header['responseCode'] ?? 400;
-        $this->responseMessage = $header['responseMessage'] ?? 'Unknown error';
-        $this->customerMessage = $header['customerMessage'] ?? 'Unknown error';
+        $this->responseCode = $header['responseCode'] ?? ($data['ResponseCode'] === '0' ? 200 : 400);
+        $this->responseMessage = $header['responseMessage'] ?? $data['ResponseDescription'] ?? 'Unknown error';
+        $this->customerMessage = $header['customerMessage'] ?? $data['CustomerMessage'] ?? $data['ResponseDescription'] ?? 'Unknown error';
         $this->timestamp = $header['timestamp'] ?? date('Y-m-d\TH:i:s.v');
     }
 
@@ -122,11 +123,31 @@ class MpesaResponse
     }
 
     /**
-     * Get the response data
+     * Get data from the response
      * @return array
      */
     public function getData(): array
     {
-        return $this->rawResponse['data'] ?? $this->rawResponse;
+        return $this->rawResponse['data'] ?? [];
+    }
+
+    public function offsetExists($offset): bool
+    {
+        return isset($this->rawResponse[$offset]);
+    }
+
+    public function offsetGet($offset): mixed
+    {
+        return $this->rawResponse[$offset] ?? null;
+    }
+
+    public function offsetSet($offset, $value): void
+    {
+        $this->rawResponse[$offset] = $value;
+    }
+
+    public function offsetUnset($offset): void
+    {
+        unset($this->rawResponse[$offset]);
     }
 }

@@ -13,7 +13,7 @@ trait STKPushTrait
      * @return \MesaSDK\PhpMpesa\Contracts\MpesaInterface Returns the current instance for method chaining
      * @throws MpesaException When the request fails or response indicates an error
      */
-    public function initiateSTKPush(): MpesaInterface
+    public function ussdPush(): MpesaInterface
     {
         $this->validateRequiredFields();
 

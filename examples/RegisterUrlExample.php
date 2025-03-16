@@ -19,7 +19,7 @@ try {
     // Initialize the class with your API credentials
     $mpesa = new Mpesa($config);
     $mpesa->setApiKey('7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi');
-    $response = $mpesa->register(
+    $response = $mpesa->registerUrl(
         '81100',  // shortCode
         'Completed',  // responseType
         'https://your-domain.com/confirmation',  // confirmationUrl

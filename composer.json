@@ -1,30 +1,11 @@
 {
-  "name": "mesa-sdk/php-mpesa-sdk",
-  "version": "1.0.0",
-  "description": "A PHP SDK for Safaricom's M-Pesa API integration, featuring fluent interface, robust error handling, and comprehensive documentation.",
+  "name": "mesasdk/php-mpesa",
+  "description": "M-PESA API Implementation",
   "type": "library",
-  "keywords": [
-    "mpesa",
-    "safaricom",
-    "payment",
-    "mobile-money",
-    "ethiopia",
-    "africa",
-    "payment-gateway",
-    "api-integration",
-    "php-sdk"
-  ],
-  "homepage": "https://github.com/Mesele-shishay/PhpMpesaSDK",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Mesele Shishay",
-      "email": "messeleshishaymm@gmail.com",
-      "role": "Developer"
-    }
-  ],
   "require": {
     "php": ">=7.4",
+    "ext-curl": "*",
+    "ext-json": "*",
     "guzzlehttp/guzzle": "^7.0",
     "vlucas/phpdotenv": "^5.6"
   },
@@ -85,6 +66,7 @@
     }
   ],
   "require-dev": {
-    "pestphp/pest": "^3.7"
-  }
+    "phpunit/phpunit": "^9.5"
+  },
+  "license": "MIT"
 }

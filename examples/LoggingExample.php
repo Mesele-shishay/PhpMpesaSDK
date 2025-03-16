@@ -50,7 +50,7 @@ try {
         ->setCallbackUrl('https://example.com/callback');
 
     // Initiate STK Push
-    $result = $mpesaCustom->initiateSTKPush();
+    $result = $mpesaCustom->ussdPush();
 
 } catch (Exception $e) {
     $logger = $mpesaCustom->getLogger();

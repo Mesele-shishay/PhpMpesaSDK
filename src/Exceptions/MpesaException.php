@@ -2,7 +2,7 @@
 
 namespace MesaSDK\PhpMpesa\Exceptions;
 
-use RuntimeException;
+use MesaSDK\PhpMpesa\Exceptions\BaseException;
 
 /**
  * Class MpesaException
@@ -11,7 +11,7 @@ use RuntimeException;
  * 
  * @package MesaSDK\PhpMpesa
  */
-class MpesaException extends RuntimeException
+class MpesaException extends BaseException
 {
     /** @var string|null The M-Pesa response code */
     private ?string $responseCode;
@@ -58,6 +58,18 @@ class MpesaException extends RuntimeException
     ];
 
     /**
+     * Error categories for response codes
+     */
+    private const ERROR_CATEGORIES = [
+        'authentication' => ['1001'],
+        'validation' => ['1003', '1004', '1005', '1006', '1007', '1008', '1009', '1010', '1011', '1012', '1013', '1014'],
+        'insufficient_funds' => ['1', '4', '5'],
+        'limit_exceeded' => ['2', '3', '8'],
+        'party_resolution' => ['6', '7', '13', '14', '20'],
+        'system' => ['17', '26'],
+    ];
+
+    /**
      * MpesaException constructor.
      * 
      * @param string $message Error message
@@ -75,7 +87,13 @@ class MpesaException extends RuntimeException
     ) {
         $this->responseCode = $responseCode;
         $this->responseData = $responseData;
-        parent::__construct($message, $code, $previous);
+
+        $context = [
+            'response_code' => $responseCode,
+            'response_data' => $responseData,
+        ];
+
+        parent::__construct($message, $context, $code, $previous);
     }
 
     /**
@@ -128,6 +146,37 @@ class MpesaException extends RuntimeException
     }
 
     /**
+     * Get the error category for the current response code
+     * 
+     * @return string|null
+     */
+    public function getErrorCategory(): ?string
+    {
+        if (!$this->responseCode) {
+            return null;
+        }
+
+        foreach (self::ERROR_CATEGORIES as $category => $codes) {
+            if (in_array($this->responseCode, $codes)) {
+                return $category;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if the error belongs to a specific category
+     * 
+     * @param string $category The category to check
+     * @return bool
+     */
+    public function isCategory(string $category): bool
+    {
+        return $this->getErrorCategory() === $category;
+    }
+
+    /**
      * Check if the error is a specific type based on response code
      * 
      * @param string $code The response code to check
@@ -145,7 +194,7 @@ class MpesaException extends RuntimeException
      */
     public function isInsufficientFunds(): bool
     {
-        return $this->isErrorCode('1');
+        return $this->isCategory('insufficient_funds');
     }
 
     /**

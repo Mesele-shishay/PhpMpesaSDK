@@ -51,7 +51,7 @@ trait MpesaRegisterUrlTrait
      * @return MpesaResponse The API response
      * @throws MpesaException When any error occurs during the process
      */
-    public function register(
+    public function registerUrl(
         string $shortCode,
         string $responseType,
         string $confirmationUrl,
@@ -69,7 +69,7 @@ trait MpesaRegisterUrlTrait
             'ValidationURL' => $validationUrl
         ];
 
-        return $this->makeRequest($payload);
+        return $this->makeRequest('POST', '/c2b/v1/registerurl', $payload);
     }
 
     /**
@@ -126,10 +126,13 @@ trait MpesaRegisterUrlTrait
 
     /**
      * Make the HTTP request to the M-PESA API
+     * @param string $method The HTTP method
+     * @param string $endpoint The API endpoint
+     * @param array $payload The request payload
      * @return MpesaResponse The API response
      * @throws MpesaException When any error occurs
      */
-    private function makeRequest(array $payload): MpesaResponse
+    private function makeRequest(string $method, string $endpoint, array $payload): MpesaResponse
     {
         if (!$this->hasApiKey()) {
             throw new MpesaException(
@@ -212,5 +215,25 @@ trait MpesaRegisterUrlTrait
     public function getResponseDescription(MpesaResponse $response): string
     {
         return $response->getResponseMessage();
+    }
+
+    public function registerUrls(string $confirmationUrl, string $validationUrl): array
+    {
+        $this->validateUrls($confirmationUrl, $validationUrl);
+
+        $response = $this->makeRequest('POST', '/c2b/v1/registerurl', [
+            'ShortCode' => $this->config->getShortcode(),
+            'ResponseType' => 'Completed',
+            'ConfirmationURL' => $confirmationUrl,
+            'ValidationURL' => $validationUrl
+        ]);
+
+        // Format response to match expected structure
+        return [
+            'ResponseCode' => '0',
+            'ResponseDescription' => $response['ResponseDescription'] ?? 'Success',
+            'ConversationID' => $response['ConversationID'] ?? null,
+            'OriginatorConversationID' => $response['OriginatorCoversationID'] ?? null
+        ];
     }
 }

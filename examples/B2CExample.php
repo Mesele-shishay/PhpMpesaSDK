@@ -49,19 +49,19 @@ try {
         'resultURL' => 'https://testt.tugza.tech/'  // Success callback URL
     ];
 
-    // 3. Initiate the B2C payment
-    $result = $mpesa->b2c(
-        $params['initiatorName'],
-        $params['securityCredential'],
-        $params['commandId'],
-        $params['amount'],
-        $params['partyA'],
-        $params['partyB'],
-        $params['remarks'],
-        $params['occasion'],
-        $params['queueTimeOutURL'],
-        $params['resultURL']
-    );
+    // 3. Initiate the B2C payment using fluent interface
+    $result = $mpesa
+        ->setInitiatorName($params['initiatorName'])
+        ->setSecurityCredential($params['securityCredential'])
+        ->setCommandId($params['commandId'])
+        ->setAmount($params['amount'])
+        ->setPartyA($params['partyA'])
+        ->setPartyB($params['partyB'])
+        ->setRemarks($params['remarks'])
+        ->setOccasion($params['occasion'])
+        ->setQueueTimeOutUrl($params['queueTimeOutURL'])
+        ->setResultUrl($params['resultURL'])
+        ->b2c();
 
     // 4. Handle the response
     if ($result && $result->getResponseMessage()) {

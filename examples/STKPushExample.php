@@ -62,7 +62,7 @@ try {
 
         error_log("Initiating STK Push...");
         // 5. Initiate the STK Push
-        $response = $mpesa->initiateSTKPush();
+        $response = $mpesa->ussdPush();
         error_log("STK Push Response: " . json_encode($response));
 
         // 6. Handle the response

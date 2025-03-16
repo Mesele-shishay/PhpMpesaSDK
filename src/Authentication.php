@@ -277,4 +277,43 @@ class Authentication
     {
         return $this->getClient();
     }
+
+    /**
+     * Make an authenticated request to the M-Pesa API
+     * 
+     * @param string $method HTTP method
+     * @param string $endpoint API endpoint
+     * @param array $payload Request payload
+     * @return array|string Response from the API
+     * @throws MpesaException
+     */
+    public function makeRequest(string $method, string $endpoint, array $payload): array|string
+    {
+        try {
+            $response = $this->client->request($method, $this->config->getBaseUrl() . $endpoint, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $this->getToken(),
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => $payload,
+            ]);
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            // If it's an error response, return just the description
+            if (isset($result['resultDesc']) && isset($result['resultCode']) && $result['resultCode'] !== '0') {
+                return $result['resultDesc'];
+            }
+
+            return $result;
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            if ($e->hasResponse()) {
+                $error = json_decode($e->getResponse()->getBody()->getContents(), true);
+                throw new MpesaException($error['resultDesc'] ?? $e->getMessage());
+            }
+            throw new MpesaException($e->getMessage());
+        } catch (\Exception $e) {
+            throw new MpesaException($e->getMessage());
+        }
+    }
 }

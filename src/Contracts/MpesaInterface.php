@@ -5,7 +5,7 @@ namespace MesaSDK\PhpMpesa\Contracts;
 interface MpesaInterface
 {
     public function authenticate(): self;
-    public function initiateSTKPush(): self;
+    public function ussdPush(): self;
     public function setPhoneNumber(string $phone): self;
     public function setAmount(float $amount): self;
     public function setCallbackUrl(string $url): self;
@@ -16,4 +16,4 @@ interface MpesaInterface
     public function getErrorMessage(): string;
     public function getMerchantRequestID(): ?string;
     public function getCheckoutRequestID(): ?string;
-} 
+}

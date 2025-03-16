@@ -47,7 +47,7 @@ trait B2CTrait
      * URL for timeout notifications
      * @var string|null
      */
-    protected ?string $queueTimeoutUrl = null;
+    protected ?string $queueTimeOutUrl = null;
 
     /**
      * URL for result notifications
@@ -170,9 +170,9 @@ trait B2CTrait
      * Set the organization's shortcode (PartyA)
      *
      * @param string $partyA
-     * @return self
+     * @return \MesaSDK\PhpMpesa\Base\BaseMpesa
      */
-    public function setPartyA(string $partyA): self
+    public function setPartyA(string $partyA): \MesaSDK\PhpMpesa\Base\BaseMpesa
     {
         $this->partyA = $partyA;
         return $this;
@@ -220,9 +220,9 @@ trait B2CTrait
      * @param string|null $url
      * @return self
      */
-    public function setQueueTimeoutUrl(?string $url): self
+    public function setQueueTimeOutUrl(?string $url): self
     {
-        $this->queueTimeoutUrl = $url;
+        $this->queueTimeOutUrl = $url;
         return $this;
     }
 
@@ -253,7 +253,7 @@ trait B2CTrait
             'PartyA' => $this->partyA,
             'PartyB' => $this->partyB,
             'Remarks' => $this->remarks,
-            'QueueTimeOutURL' => $this->queueTimeoutUrl,
+            'QueueTimeOutURL' => $this->queueTimeOutUrl,
             'ResultURL' => $this->resultUrl,
             'Occassion' => $this->occasion
         ];
@@ -324,7 +324,7 @@ trait B2CTrait
             'remarks' => 'Remarks',
             'occasion' => 'Occassion',
             'resultUrl' => 'ResultURL',
-            'queueTimeoutUrl' => 'QueueTimeOutURL'
+            'queueTimeOutUrl' => 'QueueTimeOutURL'
         ];
 
         foreach ($requiredFields as $property => $fieldName) {
@@ -338,7 +338,7 @@ trait B2CTrait
             throw new MpesaException('Result URL must be a valid HTTPS URL', 400);
         }
 
-        if (!filter_var($this->queueTimeoutUrl, FILTER_VALIDATE_URL) || strpos($this->queueTimeoutUrl, 'https://') !== 0) {
+        if (!filter_var($this->queueTimeOutUrl, FILTER_VALIDATE_URL) || strpos($this->queueTimeOutUrl, 'https://') !== 0) {
             throw new MpesaException('Queue Timeout URL must be a valid HTTPS URL', 400);
         }
     }
@@ -360,34 +360,41 @@ trait B2CTrait
      * @throws MpesaException
      */
     public function b2c(
-        string $initiatorName,
-        string $securityCredential,
-        string $commandId,
-        float $amount,
-        string $partyA,
-        string $partyB,
-        string $remarks,
-        string $occasion,
+        ?string $initiatorName = null,
+        ?string $securityCredential = null,
+        ?string $commandId = null,
+        ?float $amount = null,
+        ?string $partyA = null,
+        ?string $partyB = null,
+        ?string $remarks = null,
+        ?string $occasion = null,
         ?string $queueTimeoutUrl = null,
         ?string $resultUrl = null
     ): MpesaResponse {
-        $this->setInitiatorName($initiatorName)
-            ->setSecurityCredential($securityCredential)
-            ->setCommandID($commandId)
-            ->setAmount($amount)
-            ->setPartyA($partyA)
-            ->setPartyB($partyB)
-            ->setRemarks($remarks)
-            ->setOccasion($occasion);
-
-        if ($queueTimeoutUrl !== null) {
-            $this->setQueueTimeoutUrl($queueTimeoutUrl);
-        }
-
-        if ($resultUrl !== null) {
+        // If parameters are provided directly, set them
+        if ($initiatorName !== null)
+            $this->setInitiatorName($initiatorName);
+        if ($securityCredential !== null)
+            $this->setSecurityCredential($securityCredential);
+        if ($commandId !== null)
+            $this->setCommandID($commandId);
+        if ($amount !== null)
+            $this->setAmount($amount);
+        if ($partyA !== null)
+            $this->setPartyA($partyA);
+        if ($partyB !== null)
+            $this->setPartyB($partyB);
+        if ($remarks !== null)
+            $this->setRemarks($remarks);
+        if ($occasion !== null)
+            $this->setOccasion($occasion);
+        if ($queueTimeoutUrl !== null)
+            $this->setQueueTimeOutUrl($queueTimeoutUrl);
+        if ($resultUrl !== null)
             $this->setResultUrl($resultUrl);
-        }
 
+        // Validate and send the request
+        $this->validateB2CData();
         return $this->send();
     }
 
