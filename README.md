@@ -39,20 +39,21 @@ composer require mesasdk/php-mpesa
 ```php
 use MesaSDK\PhpMpesa\Config;
 use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
 
 // Initialize configuration
 $config = new Config();
 $config->setBaseUrl("https://apisandbox.safaricom.et")
-    ->setConsumerKey("your_consumer_key")
-    ->setConsumerSecret("your_consumer_secret")
-    ->setEnvironment('sandbox')
-    ->setShortcode('174379')
-    ->setPasskey('your_passkey');
+    ->setEnvironment('sandbox')  // Use 'production' for live environment
+    ->setConsumerKey('your_consumer_key')
+    ->setConsumerSecret('your_consumer_secret')
+    ->setShortCode('your_shortcode')
+    ->setPassKey('your_passkey')
+    ->setVerifySSL(true);  // Always true in production
 
 // Create M-Pesa instance
 $mpesa = new Mpesa($config);
 
-// Example: Simulate C2B Payment
 try {
     $response = $mpesa->authenticate()
         ->setC2BAmount(110.00)
@@ -60,31 +61,14 @@ try {
         ->setC2BBillRefNumber('091091')
         ->executeC2BSimulation();
 
-    if ($response['ResponseCode'] === '0') {
+    if ($response->isSuccessful()) {
         echo "Transaction initiated successfully!";
+        echo "Response Code: " . $response->getResponseCode();
+        echo "Conversation ID: " . $response->getConversationId();
     }
 } catch (MpesaException $e) {
     echo "Error: " . $e->getMessage();
 }
-```
-
-## Detailed Usage
-
-### Configuration
-
-The SDK supports both sandbox and production environments. Always start with sandbox for testing:
-
-```php
-$config = new Config();
-$config->setBaseUrl("https://apisandbox.safaricom.et")
-    ->setConsumerKey("your_consumer_key")
-    ->setConsumerSecret("your_consumer_secret")
-    ->setEnvironment('sandbox')  // Use 'production' for live environment
-    ->setShortcode('174379')
-    ->setPasskey('your_passkey')
-    ->setVerifySSL(true);       // Always true in production
-
-$mpesa = new Mpesa($config);
 ```
 
 ## Configuration
@@ -95,214 +79,343 @@ We recommend using environment variables for sensitive configuration:
 
 ```php
 $config = new Config();
-$config->setEnvironment($_ENV['MPESA_ENVIRONMENT'])
-      ->setConsumerKey($_ENV['MPESA_CONSUMER_KEY'])
-      ->setConsumerSecret($_ENV['MPESA_CONSUMER_SECRET'])
-      ->setShortCode($_ENV['MPESA_SHORTCODE'])
-      ->setPassKey($_ENV['MPESA_PASS_KEY']);
+$config->setBaseUrl("https://apisandbox.safaricom.et")  // Add base URL
+    ->setEnvironment($_ENV['MPESA_ENVIRONMENT'])
+    ->setConsumerKey($_ENV['MPESA_CONSUMER_KEY'])
+    ->setConsumerSecret($_ENV['MPESA_CONSUMER_SECRET'])
+    ->setShortCode($_ENV['MPESA_SHORTCODE'])
+    ->setPassKey($_ENV['MPESA_PASS_KEY'])
+    ->setVerifySSL(true);  // Set to false only for sandbox testing
 ```
 
 ### Available Configuration Options
 
-| Option         | Description                        | Required     |
-| -------------- | ---------------------------------- | ------------ |
-| environment    | 'sandbox' or 'production'          | Yes          |
-| consumerKey    | Your M-Pesa API consumer key       | Yes          |
-| consumerSecret | Your M-Pesa API consumer secret    | Yes          |
-| shortCode      | Your M-Pesa shortcode              | Yes          |
-| passKey        | Your M-Pesa passkey                | For STK Push |
-| verifySSL      | Whether to verify SSL certificates | Optional     |
+| Option         | Description                        | Required     | Notes                       |
+| -------------- | ---------------------------------- | ------------ | --------------------------- |
+| baseUrl        | API base URL                       | Yes          | Use sandbox URL for testing |
+| environment    | 'sandbox' or 'production'          | Yes          | Start with sandbox          |
+| consumerKey    | Your M-Pesa API consumer key       | Yes          | Keep secure                 |
+| consumerSecret | Your M-Pesa API consumer secret    | Yes          | Keep secure                 |
+| shortCode      | Your M-Pesa shortcode              | Yes          | -                           |
+| passKey        | Your M-Pesa passkey                | For STK Push | -                           |
+| verifySSL      | Whether to verify SSL certificates | Optional     | Always true in production   |
 
 ## Features Documentation
 
 ### STK Push
 
 ```php
-$mpesa->authenticate()
-      ->setPhoneNumber('2517XXXXXXXX')
-      ->setAmount(100)
-      ->setAccountReference('INV123')
-      ->setTransactionDesc('Payment')
-      ->setCallbackUrl('https://your-domain.com/callback')
-      ->ussdPush();
+try {
+    $mpesa->authenticate()
+        ->setPhoneNumber('2517XXXXXXXX')
+        ->setAmount(100)
+        ->setAccountReference('INV' . time())   // Dynamic reference
+        ->setTransactionDesc('Payment for Package')
+        ->setCallbackUrl('https://your-domain.com/callback');
+
+    // For sandbox testing only
+    if ($config->getEnvironment() === 'sandbox') {
+        $mpesa->setTestPassword('your-test-password');
+    }
+
+    $response = $mpesa->ussdPush();
+
+    if ($mpesa->isSuccessful()) {
+        echo "Transaction Details:\n";
+        echo "Merchant Request ID: " . $mpesa->getMerchantRequestID() . "\n";
+        echo "Checkout Request ID: " . $mpesa->getCheckoutRequestID() . "\n";
+    }
+} catch (MpesaException $e) {
+    echo "M-Pesa Error: " . $e->getMessage();
+}
 ```
 
 ### B2C Payment
 
 ```php
-$response = $mpesa->authenticate()
-    ->setInitiatorName('your_initiator')
-    ->setAmount(100)
-    ->setPhoneNumber('2517XXXXXXXX')
-    ->setResultUrl('https://your-domain.com/result')
-    ->setTimeoutUrl('https://your-domain.com/timeout')
-    ->sendB2C([
-        'CommandID' => 'BusinessPayment',
-        'Remarks' => 'Salary payment'
-    ]);
-```
+try {
+    $result = $mpesa->authenticate()
+        ->setInitiatorName('your_initiator')
+        ->setSecurityCredential('your_security_credential')
+        ->setCommandId('BusinessPayment')  // Options: SalaryPayment, BusinessPayment, PromotionPayment
+        ->setAmount(100)
+        ->setPartyA('your_shortcode')
+        ->setPartyB('2517XXXXXXXX')
+        ->setRemarks('Payment description')
+        ->setOccasion('Optional reference')
+        ->setQueueTimeOutUrl('https://your-domain.com/timeout')
+        ->setResultUrl('https://your-domain.com/result')
+        ->b2c();
 
-### Register URLs
-
-```php
-$response = $mpesa->authenticate()
-    ->registerUrls(
-        'https://your-domain.com/confirmation',
-        'https://your-domain.com/validation'
-    );
+    if ($result && $result->getResponseMessage()) {
+        echo "B2C payment initiated successfully!";
+        // Store conversation IDs for reconciliation
+        $conversationId = $result->getConversationId();
+        $originatorConversationId = $result->getOriginatorConversationId();
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
 ```
 
 ### C2B Simulation
 
-#### Using Fluent Interface (Recommended)
-
 ```php
-$response = $mpesa->authenticate()
-    ->setC2BAmount(110.00)                // Set amount
-    ->setC2BMsisdn('251945628580')       // Set customer phone number
-    ->setC2BBillRefNumber('091091')      // Set bill reference number
-    ->executeC2BSimulation();            // Execute the simulation
+use MesaSDK\PhpMpesa\Models\C2BSimulationResponse;
 
-// Handle the response
-if (isset($response['ResponseCode']) && $response['ResponseCode'] === '0') {
-    // Success
-    $conversationId = $response['ConversationID'];
-    $originatorConversationId = $response['OriginatorConversationID'];
-    $responseDesc = $response['ResponseDescription'];
-} else {
-    // Handle error
+try {
+    /** @var C2BSimulationResponse $response */
+    $response = $mpesa->authenticate()
+        ->setC2BAmount(110.00)
+        ->setC2BMsisdn('251945628580')
+        ->setC2BBillRefNumber('091091')
+        ->executeC2BSimulation();
+
+    if ($response->isSuccessful()) {
+        echo "C2B payment simulation initiated successfully!";
+        echo "Response Code: " . $response->getResponseCode();
+        echo "Conversation ID: " . $response->getConversationId();
+        echo "Customer Message: " . $response->getCustomerMessage();
+    } else {
+        echo "C2B payment simulation failed: " . $response->getResponseDescription();
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
 }
 ```
 
-#### Legacy Approach (Deprecated)
+### Account Balance Query
 
 ```php
-$response = $mpesa->authenticate()
-    ->simulateCustomerPayment(
-        110.00,                // Amount
-        '251945628580',       // Customer phone number
-        '091091'              // Bill reference number
-    );
+try {
+    $response = $mpesa->authenticate()
+        ->setSecurityCredential("your-security-credential")
+        ->setAccountBalanceInitiator('your_initiator')
+        ->setAccountBalancePartyA('your_shortcode')
+        ->setAccountBalanceRemarks('Balance check')
+        ->setAccountBalanceIdentifierType('4')
+        ->setQueueTimeOutUrl('https://your-domain.com/timeout')
+        ->setResultUrl('https://your-domain.com/result')
+        ->checkAccountBalance();
+
+    // Handle immediate response
+    if ($response['ResponseCode'] === '0') {
+        echo "Balance query initiated successfully";
+    }
+
+    // If this is a result callback
+    if (isset($response['Result'])) {
+        $balanceInfo = $mpesa->parseBalanceResult($response);
+        foreach ($balanceInfo as $account) {
+            echo sprintf(
+                "Account: %s\nCurrency: %s\nAmount: %s\n",
+                $account['account'],
+                $account['currency'],
+                $account['amount']
+            );
+        }
+    }
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage();
+}
 ```
 
 ### C2B Validation and Confirmation
 
-The SDK supports M-PESA Customer to Business (C2B) Validation and Confirmation APIs. These endpoints allow you to validate and confirm transactions initiated by customers through M-PESA channels.
-
-#### Setting Up C2B Endpoints
-
 First, register your validation and confirmation URLs:
 
 ```php
-$mpesa = new Mpesa([
-    'consumer_key' => 'your_consumer_key',
-    'consumer_secret' => 'your_consumer_secret',
-    'environment' => 'sandbox',
-    'shortcode' => '174379',
-    'key' => 'your_passkey'
-]);
-
-$response = $mpesa->registerUrls(
-    'https://your-domain.com/mpesa/confirm',
-    'https://your-domain.com/mpesa/validate'
-);
+$response = $mpesa->authenticate()
+    ->registerUrls(
+        'https://your-domain.com/mpesa/confirm',
+        'https://your-domain.com/mpesa/validate'
+    );
 ```
 
-#### Implementing Validation Endpoint
-
-The validation endpoint allows you to verify incoming payment requests before they are processed:
+#### Validation Endpoint
 
 ```php
-// In your validation endpoint handler
-$request = json_decode(file_get_contents('php://input'), true);
+<?php
+require_once 'vendor/autoload.php';
 
 try {
-    $response = $mpesa->handleValidation($request);
-    header('Content-Type: application/json');
-    echo json_encode($response);
+    // Get the callback data
+    $callbackData = file_get_contents('php://input');
+    $callback = json_decode($callbackData, true);
+
+    // Validate and process the callback
+    if (isset($callback['Body']['stkCallback'])) {
+        $resultCode = $callback['Body']['stkCallback']['ResultCode'];
+        $resultDesc = $callback['Body']['stkCallback']['ResultDesc'];
+
+        if ($resultCode === 0) {
+            // Payment successful
+            $amount = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][0]['Value'];
+            $mpesaReceiptNumber = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'];
+            $transactionDate = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][3]['Value'];
+            $phoneNumber = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][4]['Value'];
+
+            // Store transaction details in your database
+            // Update order status
+            // Send confirmation to customer
+
+            // Return success response
+            http_response_code(200);
+            echo json_encode(['ResultCode' => 0, 'ResultDesc' => 'Success']);
+        } else {
+            // Payment failed
+            error_log("Payment failed: " . $resultDesc);
+            // Handle the error (notify customer, update order status, etc.)
+        }
+    }
 } catch (Exception $e) {
-    // Handle error
+    error_log("Callback Error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Internal Server Error']);
 }
 ```
 
-#### Implementing Confirmation Endpoint
-
-The confirmation endpoint receives notifications for completed transactions:
+#### Confirmation Endpoint
 
 ```php
 // In your confirmation endpoint handler
-$request = json_decode(file_get_contents('php://input'), true);
-
 try {
+    $request = json_decode(file_get_contents('php://input'), true);
     $response = $mpesa->handleConfirmation($request);
+
+    // Store transaction details
+    $transactionId = $response->getTransactionId();
+    $amount = $response->getAmount();
+    $phoneNumber = $response->getPhoneNumber();
+
     header('Content-Type: application/json');
     echo json_encode($response);
 } catch (Exception $e) {
-    // Handle error
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
 }
 ```
 
-#### Validation Response Codes
+#### Response Models
 
-The validation endpoint may return the following response codes:
+The SDK provides type-safe response models for all API responses:
 
-- `0`: Transaction accepted
-- `C2B00011`: Invalid MSISDN
-- `C2B00012`: Invalid Account Number
-- `C2B00013`: Invalid Amount
-- `C2B00014`: Invalid KYC Details
-- `C2B00015`: Invalid Shortcode
-- `C2B00016`: Other Error
+```php
+/** @var C2BSimulationResponse $response */
+$response = $mpesa->executeC2BSimulation();
 
-#### Example Implementation
+if ($response->isSuccessful()) {
+    // Type-safe access to response data
+    $conversationId = $response->getConversationId();
+    $merchantRequestId = $response->getMerchantRequestId();
+    $checkoutRequestId = $response->getCheckoutRequestId();
 
-See the complete example implementation in `examples/c2b_validation_example.php`.
+    // Convert to array if needed
+    $responseArray = $response->toArray();
+}
+```
+
+## Security Best Practices
+
+1. Environment Variables:
+
+   - Store all sensitive credentials in environment variables
+   - Never commit credentials to version control
+   - Use .env files for local development
+
+2. SSL/TLS:
+
+   - Always use HTTPS for callback URLs
+   - Set verifySSL to true in production
+   - Keep SSL certificates up to date
+
+3. Error Handling:
+
+   - Implement comprehensive error logging
+   - Never expose sensitive error details to users
+   - Monitor failed transactions
+
+4. Data Validation:
+   - Validate all incoming callback data
+   - Implement request signing where possible
+   - Use type-safe response models
 
 ## Handling Callbacks
 
 Create a callback handler for your endpoint:
 
 ```php
-// callback.php
 <?php
-
 require_once 'vendor/autoload.php';
 
-// Get the callback data
-$callbackData = file_get_contents('php://input');
-$callback = json_decode($callbackData, true);
+try {
+    // Get the callback data
+    $callbackData = file_get_contents('php://input');
+    $callback = json_decode($callbackData, true);
 
-// Validate and process the callback
-if (isset($callback['Body']['stkCallback'])) {
-    $resultCode = $callback['Body']['stkCallback']['ResultCode'];
-    $resultDesc = $callback['Body']['stkCallback']['ResultDesc'];
+    // Validate and process the callback
+    if (isset($callback['Body']['stkCallback'])) {
+        $resultCode = $callback['Body']['stkCallback']['ResultCode'];
+        $resultDesc = $callback['Body']['stkCallback']['ResultDesc'];
 
-    if ($resultCode === 0) {
-        // Payment successful
-        // Update your database
-        // Notify your application
-    } else {
-        // Payment failed
-        // Handle the error
+        if ($resultCode === 0) {
+            // Payment successful
+            $amount = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][0]['Value'];
+            $mpesaReceiptNumber = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'];
+            $transactionDate = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][3]['Value'];
+            $phoneNumber = $callback['Body']['stkCallback']['CallbackMetadata']['Item'][4]['Value'];
+
+            // Store transaction details in your database
+            // Update order status
+            // Send confirmation to customer
+
+            // Return success response
+            http_response_code(200);
+            echo json_encode(['ResultCode' => 0, 'ResultDesc' => 'Success']);
+        } else {
+            // Payment failed
+            error_log("Payment failed: " . $resultDesc);
+            // Handle the error (notify customer, update order status, etc.)
+        }
     }
+} catch (Exception $e) {
+    error_log("Callback Error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Internal Server Error']);
 }
 ```
 
 ## Error Handling
 
-The SDK throws specific exceptions that you can catch and handle:
+The SDK provides comprehensive error handling through custom exceptions:
 
 ```php
 use MesaSDK\PhpMpesa\Exceptions\MpesaException;
+use MesaSDK\PhpMpesa\Exceptions\ConfigurationException;
+use MesaSDK\PhpMpesa\Exceptions\ValidationException;
 
 try {
-    $mpesa->ussdPush();
+    $response = $mpesa->authenticate()
+        ->setPhoneNumber('2517XXXXXXXX')
+        ->setAmount(100)
+        ->ussdPush();
+} catch (ConfigurationException $e) {
+    // Handle configuration errors (invalid credentials, missing required fields)
+    error_log("Configuration Error: " . $e->getMessage());
+    echo "Please check your M-Pesa configuration.";
+} catch (ValidationException $e) {
+    // Handle validation errors (invalid phone number, amount, etc.)
+    error_log("Validation Error: " . $e->getMessage());
+    echo "Please check your input data.";
 } catch (MpesaException $e) {
-    // Handle M-Pesa specific errors
+    // Handle M-Pesa API specific errors
     error_log("M-Pesa Error: " . $e->getMessage());
+    error_log("Error Code: " . $e->getCode());
+    echo "Transaction failed. Please try again later.";
 } catch (Exception $e) {
-    // Handle other errors
-    error_log("Error: " . $e->getMessage());
+    // Handle unexpected errors
+    error_log("Unexpected Error: " . $e->getMessage());
+    echo "An unexpected error occurred.";
 }
 ```
 
@@ -315,8 +428,30 @@ use MesaSDK\PhpMpesa\Logging\Logger;
 
 // Configure custom logging
 $logger = new Logger();
+
+// Set custom log path
 $logger->setLogPath('/path/to/your/logs');
+
+// Enable debug logging
+$logger->setDebug(true);
+
+// Add logger to M-Pesa instance
 $mpesa->setLogger($logger);
+
+// Logs will now include:
+// - API requests and responses
+// - Authentication attempts
+// - Transaction details
+// - Error messages and stack traces
+```
+
+### Log File Example
+
+```log
+[2024-03-18 10:15:30] mpesa.INFO: Initiating authentication request
+[2024-03-18 10:15:31] mpesa.DEBUG: Authentication successful. Token: abc...xyz
+[2024-03-18 10:15:32] mpesa.INFO: STK push request initiated for phone: 2517XXXXXXXX
+[2024-03-18 10:15:33] mpesa.DEBUG: Response received: {"ResultCode": "0", "ResultDesc": "Success"}
 ```
 
 ## Testing
@@ -327,17 +462,25 @@ Run the test suite:
 composer test
 ```
 
-## Security
+The SDK includes comprehensive tests:
 
-- Always use HTTPS for callback URLs
-- Store API credentials securely
-- Validate all incoming callback data
-- Use environment variables for sensitive data
-- Keep the SDK updated to the latest version
+- Unit tests for all core functionality
+- Integration tests for API endpoints
+- Mock responses for offline testing
+- Test coverage reports
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch
+3. Write your changes
+4. Write tests for your changes
+5. Run the tests
+6. Submit a pull request
+
+Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
@@ -345,7 +488,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-For support and questions, please [open an issue](https://github.com/Mesele-shishay/PhpMpesaSDK/issues) on GitHub.
+For support and questions:
+
+- [Open an issue](https://github.com/Mesele-shishay/PhpMpesaSDK/issues) on GitHub
+- Check our [documentation](https://mesele-shishay.github.io/PhpMpesaSDK/)
+- Join our [community forum](https://github.com/Mesele-shishay/PhpMpesaSDK/discussions)
 
 ## Changelog
 
