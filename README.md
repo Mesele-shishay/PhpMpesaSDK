@@ -313,6 +313,7 @@ if ($response->isSuccessful()) {
     // Convert to array if needed
     $responseArray = $response->toArray();
 }
+
 ```
 
 ## Security Best Practices
@@ -447,60 +448,12 @@ $mpesa->setLogger($logger);
 
 ### Log File Example
 
-```log
+````log
 [2024-03-18 10:15:30] mpesa.INFO: Initiating authentication request
 [2024-03-18 10:15:31] mpesa.DEBUG: Authentication successful. Token: abc...xyz
 [2024-03-18 10:15:32] mpesa.INFO: STK push request initiated for phone: 2517XXXXXXXX
 [2024-03-18 10:15:33] mpesa.DEBUG: Response received: {"ResultCode": "0", "ResultDesc": "Success"}
-```
 
-## Testing
-
-Run the test suite:
-
-```bash
-composer test
-```
-
-The SDK includes comprehensive tests:
-
-- Unit tests for all core functionality
-- Integration tests for API endpoints
-- Mock responses for offline testing
-- Test coverage reports
-
-## Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch
-3. Write your changes
-4. Write tests for your changes
-5. Run the tests
-6. Submit a pull request
-
-Please read our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For support and questions:
-
-- [Open an issue](https://github.com/Mesele-shishay/PhpMpesaSDK/issues) on GitHub
-- Check our [documentation](https://mesele-shishay.github.io/PhpMpesaSDK/)
-- Join our [community forum](https://github.com/Mesele-shishay/PhpMpesaSDK/discussions)
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
-
-## Response Models
-
-The SDK provides type-safe response models for all API responses. These models make it easier to work with API responses and provide better IDE support.
 
 ### Base Response Model
 
@@ -513,7 +466,7 @@ $response->getResponseDescription();          // Get response description
 $response->getConversationId();              // Get conversation ID
 $response->getOriginatorConversationId();    // Get originator conversation ID
 $response->toArray();                        // Convert response to array
-```
+````
 
 ### C2B Simulation Response
 
@@ -574,33 +527,7 @@ if ($response->isSuccessful()) {
     // Convert to array if needed
     $responseArray = $response->toArray();
 }
-```
 
-# M-PESA Account Balance API Implementation
-
-This implementation provides a simple way to interact with the M-PESA Account Balance API. It allows businesses to programmatically check the balance of their M-PESA accounts in real-time.
-
-## Features
-
-- Check M-PESA account balance
-- Parse balance information for multiple accounts
-- Error handling and validation
-- Asynchronous API support with callback URLs
-
-## Requirements
-
-- PHP 7.4 or higher
-- Curl extension enabled
-- Valid M-PESA API credentials
-- Active internet connection
-
-## Installation
-
-1. Clone this repository
-2. Install dependencies:
-
-```bash
-composer install
 ```
 
 ## Configuration
@@ -760,3 +687,53 @@ try {
 | identifierType     | Type of organization receiving the transaction (default: 4) | Optional |
 | queueTimeOutUrl    | Timeout URL for the request                                 | Yes      |
 | resultUrl          | Result URL for the request                                  | Yes      |
+
+````
+
+## Testing
+
+Run the test suite:
+
+```bash
+composer test
+````
+
+The SDK includes comprehensive tests:
+
+- Unit tests for all core functionality
+- Integration tests for API endpoints
+- Mock responses for offline testing
+- Test coverage reports
+
+## Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch
+3. Write your changes
+4. Write tests for your changes
+5. Run the tests
+6. Submit a pull request
+
+Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For support and questions:
+
+- [Open an issue](https://github.com/Mesele-shishay/PhpMpesaSDK/issues) on GitHub
+- Check our [documentation](https://mesele-shishay.github.io/PhpMpesaSDK/)
+- Join our [community forum](https://github.com/Mesele-shishay/PhpMpesaSDK/discussions)
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## Response Models
+
+The SDK provides type-safe response models for all API responses. These models make it easier to work with API responses and provide better IDE support.
