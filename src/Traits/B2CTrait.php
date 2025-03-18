@@ -227,7 +227,7 @@ trait B2CTrait
      */
     public function setQueueTimeOutUrl(?string $url): self
     {
-        $this->queueTimeOutUrl = $url;
+        $this->timeoutUrl = $url;
         return $this;
     }
 
@@ -283,7 +283,7 @@ trait B2CTrait
         $data['QueueTimeOutURL'] = $data['QueueTimeOutURL'] ?? $this->config->get('queue_timeout_url');
         $data['ResultURL'] = $data['ResultURL'] ?? $this->config->get('result_url');
 
-        $endpoint = $this->config->getBaseUrl() . '/mpesa/b2c/v1/paymentrequest';
+        $endpoint = $this->config->getBaseUrl() . '/mpesa/b2c/v2/paymentrequest';
 
         $response = $this->client->post($endpoint, [
             'json' => $data,
@@ -292,6 +292,7 @@ trait B2CTrait
                 'Content-Type' => 'application/json'
             ]
         ]);
+
 
         $decodedResponse = json_decode($response->getBody(), true);
 
@@ -330,7 +331,7 @@ trait B2CTrait
             'remarks' => 'Remarks',
             'occasion' => 'Occassion',
             'resultUrl' => 'ResultURL',
-            'queueTimeOutUrl' => 'QueueTimeOutURL'
+            'timeoutUrl' => 'QueueTimeOutURL'
         ];
 
         foreach ($requiredFields as $property => $fieldName) {
@@ -344,7 +345,7 @@ trait B2CTrait
             throw new MpesaException('Result URL must be a valid HTTPS URL', 400);
         }
 
-        if (!filter_var($this->queueTimeOutUrl, FILTER_VALIDATE_URL) || strpos($this->queueTimeOutUrl, 'https://') !== 0) {
+        if (!filter_var($this->timeoutUrl, FILTER_VALIDATE_URL) || strpos($this->timeoutUrl, 'https://') !== 0) {
             throw new MpesaException('Queue Timeout URL must be a valid HTTPS URL', 400);
         }
     }
@@ -376,7 +377,7 @@ trait B2CTrait
         ?string $occasion = null,
         ?string $queueTimeoutUrl = null,
         ?string $resultUrl = null
-    ): \MesaSDK\PhpMpesa\Responses\MpesaResponse {
+    ): MpesaResponse {
         // If parameters are provided directly, set them
         if ($initiatorName !== null) {
             $this->setInitiatorName($initiatorName);

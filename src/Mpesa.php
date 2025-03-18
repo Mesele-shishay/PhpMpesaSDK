@@ -198,9 +198,10 @@ class Mpesa extends BaseMpesa
             'Occassion' => $this->occasion ?? ''
         ];
 
+
         $payload = array_merge($defaultPayload, $payload);
 
-        return $this->executeRequest('POST', '/mpesa/b2c/v1/paymentrequest', $payload);
+        return $this->executeRequest('POST', '/mpesa/b2c/v2/paymentrequest', $payload);
     }
 
     /**

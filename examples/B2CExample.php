@@ -42,7 +42,7 @@ try {
         'commandId' => 'BusinessPayment',  // Options: SalaryPayment, BusinessPayment, PromotionPayment
         'amount' => 10,
         'partyA' => '1020',  // Your shortcode
-        'partyB' => '251700100150',  // Recipient phone number
+        'partyB' => '251700404709',  // Recipient phone number
         'remarks' => 'Bonus payment',  // Payment description
         'occasion' => 'StallOwner',  // Optional reference
         'queueTimeOutURL' => 'https://testt.tugza.tech/',  // Timeout callback URL
