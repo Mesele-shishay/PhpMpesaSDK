@@ -1,0 +1,35 @@
+# Base Classes
+
+## BaseMpesa
+
+The `BaseMpesa` class is an abstract base class that implements the `MpesaInterface`. It provides common functionality for handling M-Pesa transactions, including authentication, logging, and HTTP client traits.
+
+### Methods
+
+- `setLogger(MpesaLogger $logger): self` - Sets the logger instance.
+- `getAuth(): Authentication` - Retrieves the authentication instance.
+- `getLogger(): MpesaLogger` - Retrieves the logger instance.
+- `setPhoneNumber(string $phone): self` - Sets the customer's phone number.
+- `setAmount(float $amount): self` - Sets the transaction amount.
+- `setCallbackUrl(string $url): self` - Sets the callback URL for transaction results.
+- `setTransactionDesc(string $desc): self` - Sets the description of the transaction.
+- `setAccountReference(string $reference): self` - Sets the reference for the transaction.
+- `setInitiatorName(string $initiatorName): self` - Sets the initiator name.
+- `setSecurityCredential(string $securityCredential): self` - Sets the security credential.
+- `setCommandID(string $commandId): self` - Sets the command ID for B2C transactions.
+- `authenticate(): self` - Authenticates the user.
+- `getRawResponse(): array|null` - Retrieves the raw response from the API request.
+- `getErrorMessage(): string` - Retrieves the error message if the transaction failed.
+- `getMerchantRequestID(): string|null` - Retrieves the merchant request ID.
+- `getCheckoutRequestID(): string|null` - Retrieves the checkout request ID.
+- `validateRequiredFields(): void` - Validates required fields for the transaction.
+- `logApiRequest(string $endpoint, array $payload, array $headers = []): void` - Logs the API request.
+- `logApiResponse(string $endpoint, $response, int $statusCode): void` - Logs the API response.
+- `executeRequest(string $method, string $endpoint, array $payload): array|string` - Executes the API request.
+- `setAccountBalanceInitiator(string $initiator): self` - Sets the account balance initiator.
+- `setAccountBalancePartyA(string $partyA): self` - Sets the account balance party A.
+- `setAccountBalanceRemarks(string $remarks): self` - Sets the account balance remarks.
+- `setAccountBalanceIdentifierType(string $identifierType): self` - Sets the account balance identifier type.
+- `checkAccountBalance(): array` - Checks the account balance.
+- `setQueueTimeOutUrl(string $url): self` - Sets the queue timeout URL.
+- `setResultUrl(string $url): self` - Sets the result URL.

@@ -1,0 +1,128 @@
+# Introduction
+
+Welcome to the PHP M-Pesa SDK Documentation! This comprehensive SDK provides a modern, type-safe interface for integrating M-Pesa payment services into your PHP applications in Ethiopia.
+
+## Overview
+
+The PHP M-Pesa SDK offers a robust and developer-friendly way to interact with M-Pesa's payment gateway. Built with modern PHP practices and designed with a fluent interface, it simplifies the integration of M-Pesa services while ensuring type safety and proper error handling.
+
+## Key Features
+
+- **STK Push Integration**: Easily implement M-Pesa's STK Push functionality
+- **B2C Operations**: Handle Business-to-Customer transactions seamlessly
+- **C2B Capabilities**: Process Customer-to-Business payments with validation
+- **Transaction Status Queries**: Monitor and track payment statuses
+- **URL Registration**: Automated handling of confirmation and validation URLs
+- **Account Balance Queries**: Check your M-Pesa account balance
+- **Type-Safe Responses**: All responses are properly typed for better reliability
+- **Fluent Interface**: Modern, chainable methods for better code readability
+- **Comprehensive Error Handling**: Robust error handling with custom exceptions
+- **Extensive Testing**: Well-tested codebase ensuring stability
+
+## Getting Started
+
+### Installation
+
+Install the SDK using Composer:
+
+```bash
+composer require mesasdk/php-mpesa
+```
+
+### Basic Usage
+
+Here's a quick example of how to use the SDK for an STK Push request:
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+
+// Initialize the SDK
+$mpesa = new Mpesa([
+    'consumer_key' => 'your_consumer_key',
+    'consumer_secret' => 'your_consumer_secret',
+    'environment' => 'sandbox', // or 'production'
+    'shortcode' => 'your_shortcode',
+    'key' => 'your_passkey'
+]);
+
+// Initiate STK Push
+try {
+    $response = $mpesa->stkPush(
+        100, // Amount
+        '251712345678', // Phone number
+        'REF123', // Reference
+        'Payment for goods' // Description
+    );
+
+    // Handle the response
+    print_r($response);
+} catch (MpesaException $e) {
+    // Handle any errors
+    echo $e->getMessage();
+}
+```
+
+## Prerequisites
+
+- PHP 7.4 or higher
+- Composer
+- GuzzleHTTP 7.0 or higher
+- PHP extensions: curl, json
+- Valid M-Pesa API credentials (Consumer Key and Secret)
+- Internet connectivity
+
+## Core Features
+
+### 1. STK Push
+
+Initiate M-Pesa payments through STK Push notifications to customer phones.
+
+### 2. B2C Operations
+
+Handle Business-to-Customer transactions including:
+
+- Salary Payments
+- Promotion Payments
+- Business Payments
+
+### 3. C2B Operations
+
+Process Customer-to-Business payments with:
+
+- Payment validation
+- Transaction simulation (for testing)
+- Real-time notification handling
+
+### 4. Transaction Management
+
+- Query transaction status
+- Check account balance
+- Handle timeouts and callbacks
+
+## Next Steps
+
+- Explore the [Quick Start Guide](./quick-start.mdx) for detailed setup instructions
+- Check out [Code Examples](./examples.mdx) for common use cases
+- Review the [API Reference](./api-reference.mdx) for detailed method documentation
+- Learn about [Error Handling](./error-handling.mdx)
+
+## Support
+
+If you encounter any issues or have questions:
+
+1. Check our [FAQ](./faq.mdx)
+2. Review existing [GitHub Issues](https://github.com/Mesele-shishay/PhpMpesaSDK/issues)
+3. Create a new issue if needed
+4. Join our [GitHub Discussions](https://github.com/Mesele-shishay/PhpMpesaSDK/discussions)
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](./contributing.mdx) for details on how to:
+
+- Submit bug reports
+- Suggest new features
+- Submit pull requests
+
+## License
+
+This SDK is released under the MIT License. See the LICENSE file for more details.

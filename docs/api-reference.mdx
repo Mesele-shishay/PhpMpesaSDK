@@ -1,0 +1,58 @@
+# API Reference
+
+## Mpesa Class
+
+### Methods
+
+#### `querySTKStatus`
+
+- **Description**: Queries the status of an STK Push request.
+- **Parameters**:
+  - `checkoutRequestId` (string): The unique identifier for the STK Push request.
+- **Returns**: `array` - The response from the M-Pesa API.
+- **Example**:
+  ```php
+  $response = $mpesa->querySTKStatus('checkoutRequestId');
+  ```
+- **Notes**: Ensure the `checkoutRequestId` is valid and corresponds to an existing request.
+
+#### `registerUrls`
+
+- **Description**: Registers confirmation and validation URLs for M-Pesa transactions.
+- **Parameters**:
+  - `confirmationUrl` (string): The URL to receive transaction confirmations.
+  - `validationUrl` (string): The URL to receive transaction validations.
+- **Returns**: `array` - The response from the M-Pesa API.
+- **Example**:
+  ```php
+  $response = $mpesa->registerUrls('https://your-domain.com/confirm', 'https://your-domain.com/validate');
+  ```
+- **Notes**: Ensure the URLs are accessible and correctly handle incoming requests.
+
+## Traits
+
+### STKPushTrait
+
+#### `ussdPush`
+
+- **Description**: Initiates a USSD Push request.
+- **Parameters**: None
+- **Returns**: `MpesaInterface` - The interface for chaining further requests.
+- **Example**:
+  ```php
+  $mpesa->ussdPush();
+  ```
+- **Notes**: Use this method to initiate USSD Push requests.
+
+### B2CTrait
+
+#### `send`
+
+- **Description**: Sends a B2C payment request.
+- **Parameters**: None
+- **Returns**: `MpesaResponse` - The response from the M-Pesa API.
+- **Example**:
+  ```php
+  $response = $mpesa->send();
+  ```
+- **Notes**: Ensure all required parameters are set before calling this method.

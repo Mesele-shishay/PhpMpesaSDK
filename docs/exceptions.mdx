@@ -1,0 +1,44 @@
+# Exceptions
+
+## MpesaException
+
+The `MpesaException` class is the base exception for all M-Pesa-related errors. It includes properties for response codes and data, and methods to retrieve them.
+
+### Methods
+
+- `getResponseCode(): string` - Retrieves the response code from the exception.
+- `getResponseData(): array` - Retrieves the response data from the exception.
+
+## BaseException
+
+The `BaseException` class serves as the base for all SDK exceptions. It extends `RuntimeException` and provides methods for retrieving additional error context.
+
+### Methods
+
+- `getContext(): array` - Retrieves additional error context.
+
+## ValidationException
+
+The `ValidationException` class is thrown when validation errors occur. It includes properties for validation errors and methods to access them.
+
+### Methods
+
+- `getErrors(): array` - Retrieves the validation errors.
+- `missingRequiredField(string $fieldName, ?array $context = null): self` - Creates an exception for a missing required field.
+
+## AuthenticationException
+
+The `AuthenticationException` class is thrown when authentication-related errors occur. It includes properties for error types and methods to access them.
+
+### Methods
+
+- `getErrorType(): string|null` - Retrieves the authentication error type.
+
+## NetworkException
+
+The `NetworkException` class is thrown when network-related errors occur. It includes properties for HTTP status codes and request URLs, and methods to access them.
+
+### Methods
+
+- `getStatusCode(): int|null` - Retrieves the HTTP status code.
+- `getUrl(): string|null` - Retrieves the request URL.

@@ -1,0 +1,20 @@
+# Contracts
+
+## MpesaInterface
+
+The `MpesaInterface` defines the contract for the M-Pesa SDK. It includes methods for authentication, setting transaction details, and processing callbacks.
+
+### Methods
+
+- `authenticate(): self` - Authenticates the user.
+- `ussdPush(): self` - Initiates a USSD push request.
+- `setPhoneNumber(string $phone): self` - Sets the customer's phone number.
+- `setAmount(float $amount): self` - Sets the transaction amount.
+- `setCallbackUrl(string $url): self` - Sets the callback URL for transaction results.
+- `setTransactionDesc(string $desc): self` - Sets the description of the transaction.
+- `setAccountReference(string $reference): self` - Sets the reference for the transaction.
+- `processCallback(array $callbackData): self` - Processes the callback data from the M-Pesa API.
+- `isSuccessful(): bool` - Checks if the transaction was successful.
+- `getErrorMessage(): string` - Retrieves the error message if the transaction failed.
+- `getMerchantRequestID(): string|null` - Retrieves the merchant request ID.
+- `getCheckoutRequestID(): string|null` - Retrieves the checkout request ID.

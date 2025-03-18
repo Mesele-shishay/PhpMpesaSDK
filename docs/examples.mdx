@@ -1,0 +1,140 @@
+# Examples
+
+## B2C Example
+
+The `B2CExample.php` demonstrates how to initiate a B2C (Business to Customer) payment using the M-Pesa API. This example is useful for scenarios such as salary payments, business payments, and promotion payments.
+
+### Prerequisites
+
+- Valid M-Pesa API credentials
+- Registered initiator name
+- Security credential
+
+### Code Example
+
+```php
+<?php
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
+
+// Load configuration from environment variables in production
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi")
+    ->setConsumerSecret("zEvvR7yTpNYG1DoH31MKOYOzh0iZ9kdXAK1andjjrqXdnJMTbiUMhnnz5Qf12oNC")
+    ->setEnvironment('sandbox')
+    ->setVerifySSL(false);  // Note: Always use true in production
+
+// Initialize M-Pesa client
+$mpesa = new Mpesa($config);
+
+try {
+    // 1. Authenticate with M-Pesa API
+    $mpesa->authenticate();
+
+    // 2. Set up B2C payment parameters
+    $params = [
+        'initiatorName' => 'apitest',  // Your registered initiator name
+        'securityCredential' => 'lMhf0UqE4ydeEDwpUskmPgkNDZnA6NLi7z3T1TQuWCkH3/ScW8pRRnobq/AcwFvbC961+zDMgOEYGm8Oivb7L/7Y9ED3lhR7pJvnH8B1wYis5ifdeeWI6XE2NSq8X1Tc7QB9Dg8SlPEud3tgloB2DlT+JIv3ebIl/J/8ihGVrq499bt1pz/EA2nzkCtGeHRNbEDxkqkEnbioV0OM//0bv4K++XyV6jUFlIIgkDkmcK6aOU8mPBHs2um9aP+Y+nTJaa6uHDudRFg0+3G6gt1zRCPs8AYbts2IebseBGfZKv5K6Lqk9/W8657gEkrDZE8Mi78MVianqHdY/8d6D9KKhw==',
+        'commandId' => 'BusinessPayment',  // Options: SalaryPayment, BusinessPayment, PromotionPayment
+        'amount' => 10,
+        'partyA' => '1020',  // Your shortcode
+        'partyB' => '251700404709',  // Recipient phone number
+        'remarks' => 'Bonus payment',  // Payment description
+        'occasion' => 'StallOwner',  // Optional reference
+        'queueTimeOutURL' => 'https://testt.tugza.tech/',  // Timeout callback URL
+        'resultURL' => 'https://testt.tugza.tech/'  // Success callback URL
+    ];
+
+    // 3. Initiate the B2C payment using fluent interface
+    $result = $mpesa
+        ->setInitiatorName($params['initiatorName'])
+        ->setSecurityCredential($params['securityCredential'])
+        ->setCommandId($params['commandId'])
+        ->setAmount($params['amount'])
+        ->setPartyA($params['partyA'])
+        ->setPartyB($params['partyB'])
+        ->setRemarks($params['remarks'])
+        ->setOccasion($params['occasion'])
+        ->setQueueTimeOutUrl($params['queueTimeOutURL'])
+        ->setResultUrl($params['resultURL'])
+        ->b2c();
+
+    // 4. Handle the response
+    if ($result && $result->getResponseMessage()) {
+        echo "✅ B2C payment initiated successfully!\n";
+        echo "Response: \n";
+        print_r($result->getResponseMessage());
+
+        // Store these details in your database for reconciliation
+        // $conversationId = $result->getConversationId();
+        // $originatorConversationId = $result->getOriginatorConversationId();
+    }
+
+} catch (MpesaException $e) {
+    // Handle M-Pesa specific errors
+    echo "❌ M-Pesa Error:\n";
+    echo "Message: " . $e->getMessage() . "\n";
+    echo "Code: " . $e->getCode() . "\n";
+
+    // Log the error for debugging
+    error_log("M-Pesa B2C Error: " . $e->getMessage());
+} catch (Exception $e) {
+    // Handle unexpected errors
+    echo "❌ Unexpected Error: " . $e->getMessage() . "\n";
+    error_log("Unexpected B2C Error: " . $e->getMessage());
+}
+```
+
+### Next Steps
+
+1. Implement callback handling for `resultURL` and `queueTimeOutURL`.
+2. Store transaction details in your database.
+3. Implement transaction status query.
+4. Add proper logging and monitoring.
+
+### Note
+
+In production:
+
+- Use environment variables for credentials.
+- Enable SSL verification.
+- Implement proper error handling and logging.
+- Store and track all transaction details.
+
+## Check Balance Example
+
+This example demonstrates how to check the account balance using the M-Pesa API.
+
+```php
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+
+$config = new Config();
+$config->setEnvironment('sandbox')
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setVerifySSL(false);
+
+$mpesa = new Mpesa($config);
+
+try {
+    $response = $mpesa
+        ->authenticate()
+        ->setSecurityCredential("your_security_credential")
+        ->setAccountBalanceInitiator('apitest')
+        ->setAccountBalancePartyA('1020')
+        ->setAccountBalanceRemarks('Monthly balance check')
+        ->setQueueTimeOutUrl('https://your-domain.com/timeout')
+        ->setResultUrl('https://your-domain.com/result')
+        ->checkAccountBalance();
+
+    echo "API Response:\n";
+    echo json_encode($response, JSON_PRETTY_PRINT) . "\n\n";
+} catch (MpesaException $e) {
+    echo $e->getMessage();
+}
+```

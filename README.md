@@ -541,33 +541,6 @@ Before using the API, you need to set up your M-PESA API credentials:
 5. Result URL
 6. Bearer token
 
-## Usage
-
-Here's a basic example of how to use the Account Balance API:
-
-```php
-<?php
-
-require_once __DIR__ . '/vendor/autoload.php';
-
-use MPesa\AccountBalance;
-
-$mpesa = new AccountBalance(
-    'your_initiator',
-    'your_security_credential',
-    'your_party_a',
-    'https://your-domain.com/timeout',
-    'https://your-domain.com/result'
-);
-
-try {
-    $response = $mpesa->checkBalance('your_bearer_token');
-    // Handle the response
-} catch (\Exception $e) {
-    // Handle errors
-}
-```
-
 See the `examples/check_balance.php` file for a complete working example.
 
 ## Response Handling
@@ -614,6 +587,7 @@ The API provides two types of responses:
 ## Error Handling
 
 The implementation includes comprehensive error handling for various scenarios:
+c
 
 - Invalid credentials
 - Network errors

@@ -1,0 +1,60 @@
+# Frequently Asked Questions (FAQ)
+
+## General Questions
+
+### What is the PHP M-Pesa SDK?
+
+The PHP M-Pesa SDK is a comprehensive library designed to facilitate the integration of M-Pesa payment services into PHP applications. It provides a modern, type-safe interface for interacting with the M-Pesa API, making it easier for developers to implement payment functionalities.
+
+### What are the prerequisites for using the SDK?
+
+To use the PHP M-Pesa SDK, you need:
+
+- PHP 7.4 or higher
+- Composer for dependency management
+- GuzzleHTTP 7.0 or higher
+- PHP extensions: curl, json
+- Valid M-Pesa API credentials (Consumer Key and Secret)
+- Internet connectivity
+
+### How do I install the SDK?
+
+You can install the SDK using Composer:
+
+```bash
+composer require mesasdk/php-mpesa
+```
+
+## Usage Questions
+
+### How do I initialize the SDK?
+
+Here's an example of how to initialize the SDK:
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+
+$mpesa = new Mpesa([
+    'consumer_key' => 'your_consumer_key',
+    'consumer_secret' => 'your_consumer_secret',
+    'environment' => 'sandbox', // or 'production'
+    'shortcode' => 'your_shortcode',
+    'key' => 'your_passkey'
+]);
+```
+
+### How do I handle errors?
+
+The SDK provides robust error handling through custom exceptions. You can catch `MpesaException` to handle specific errors:
+
+```php
+try {
+    $response = $mpesa->querySTKStatus('checkoutRequestId');
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
+```
+
+## Support
+
+If you have more questions or need further assistance, please check our [GitHub Issues](https://github.com/Mesele-shishay/PhpMpesaSDK/issues) or open a new issue.

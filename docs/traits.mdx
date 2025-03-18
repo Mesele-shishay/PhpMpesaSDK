@@ -1,0 +1,328 @@
+# Traits Documentation
+
+## STKPushTrait
+
+### Methods
+
+#### `ussdPush`
+
+- **Description**: Initiates an STK Push request.
+- **Parameters**: None
+- **Returns**: `MpesaInterface` - The interface for chaining further requests.
+- **Example**:
+  ```php
+  $mpesa->ussdPush();
+  ```
+- **Notes**: Use this method to initiate USSD Push requests.
+
+#### `processCallback`
+
+- **Description**: Processes the callback data received from the M-Pesa API.
+- **Parameters**:
+  - `callbackData` (array): The callback data to process.
+- **Returns**: `MpesaInterface` - The interface for chaining further requests.
+- **Example**:
+  ```php
+  $mpesa->processCallback($callbackData);
+  ```
+- **Notes**: This method is used to handle responses from the M-Pesa API.
+
+#### `getResultCode`
+
+- **Description**: Retrieves the result code from the last operation.
+- **Parameters**: None
+- **Returns**: `?int` - The result code, or null if not set.
+- **Example**:
+  ```php
+  $resultCode = $mpesa->getResultCode();
+  ```
+- **Notes**: This method is useful for checking the outcome of an operation.
+
+#### `getResultDesc`
+
+- **Description**: Retrieves the result description from the last operation.
+- **Parameters**: None
+- **Returns**: `?string` - The result description, or null if not set.
+- **Example**:
+  ```php
+  $resultDesc = $mpesa->getResultDesc();
+  ```
+- **Notes**: This method provides a human-readable description of the operation result.
+
+#### `isCanceledByUser`
+
+- **Description**: Checks if the last operation was canceled by the user.
+- **Parameters**: None
+- **Returns**: `bool` - True if the operation was canceled, false otherwise.
+- **Example**:
+  ```php
+  $isCanceled = $mpesa->isCanceledByUser();
+  ```
+- **Notes**: This method is useful for handling user cancellations.
+
+#### `getCallbackData`
+
+- **Description**: Retrieves the callback data from the last operation.
+- **Parameters**: None
+- **Returns**: `array` - The callback data.
+- **Example**:
+  ```php
+  $callbackData = $mpesa->getCallbackData();
+  ```
+- **Notes**: This method is used to access the data received from the M-Pesa API.
+
+#### `setTestPassword`
+
+- **Description**: Sets a test password for the STK Push request.
+- **Parameters**:
+  - `testPassword` (string): The test password to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setTestPassword('test123');
+  ```
+- **Notes**: This method is used for testing purposes.
+
+## B2CTrait
+
+### Methods
+
+#### `setInitiatorName`
+
+- **Description**: Sets the name of the initiator for the B2C request.
+- **Parameters**:
+  - `initiatorName` (string): The name of the initiator.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setInitiatorName('John Doe');
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `setSecurityCredential`
+
+- **Description**: Sets the security credential for the B2C request.
+- **Parameters**:
+  - `securityCredential` (string): The security credential to set.
+- **Returns**: `\MesaSDK\PhpMpesa\Base\BaseMpesa` - The base M-Pesa instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setSecurityCredential('secure123');
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `setCommandID`
+
+- **Description**: Sets the command ID for the B2C request.
+- **Parameters**:
+  - `commandId` (string): The command ID to set.
+- **Returns**: `\MesaSDK\PhpMpesa\Base\BaseMpesa` - The base M-Pesa instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setCommandID('BusinessPayment');
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `setAmount`
+
+- **Description**: Sets the amount for the B2C request.
+- **Parameters**:
+  - `amount` (float): The amount to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setAmount(100.00);
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `getAmount`
+
+- **Description**: Retrieves the amount set for the B2C request.
+- **Parameters**: None
+- **Returns**: `float` - The amount set.
+- **Example**:
+  ```php
+  $amount = $mpesa->getAmount();
+  ```
+- **Notes**: This method is useful for verifying the amount before sending the request.
+
+#### `setPartyA`
+
+- **Description**: Sets the organization's shortcode for the B2C request.
+- **Parameters**:
+  - `partyA` (string): The organization's shortcode.
+- **Returns**: `\MesaSDK\PhpMpesa\Base\BaseMpesa` - The base M-Pesa instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setPartyA('123456');
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `setPartyB`
+
+- **Description**: Sets the customer's phone number for the B2C request.
+- **Parameters**:
+  - `partyB` (string): The customer's phone number.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setPartyB('251700404709');
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `setRemarks`
+
+- **Description**: Sets additional information about the transaction.
+- **Parameters**:
+  - `remarks` (string): The remarks to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setRemarks('Payment for services');
+  ```
+- **Notes**: This method is optional but useful for providing context.
+
+#### `setOccasion`
+
+- **Description**: Sets the occasion for the B2C request.
+- **Parameters**:
+  - `occasion` (string): The occasion to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setOccasion('Monthly payment');
+  ```
+- **Notes**: This method is optional but useful for providing context.
+
+#### `setQueueTimeOutUrl`
+
+- **Description**: Sets the URL for timeout notifications.
+- **Parameters**:
+  - `url` (string): The URL to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setQueueTimeOutUrl('https://your-domain.com/timeout');
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `setResultUrl`
+
+- **Description**: Sets the URL for result notifications.
+- **Parameters**:
+  - `url` (string): The URL to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setResultUrl('https://your-domain.com/result');
+  ```
+- **Notes**: This method is required for B2C operations.
+
+#### `getB2CData`
+
+- **Description**: Retrieves the B2C data set for the request.
+- **Parameters**: None
+- **Returns**: `array` - The B2C data.
+- **Example**:
+  ```php
+  $b2cData = $mpesa->getB2CData();
+  ```
+- **Notes**: This method is useful for verifying the data before sending the request.
+
+#### `send`
+
+- **Description**: Sends the B2C payment request.
+- **Parameters**: None
+- **Returns**: `MpesaResponse` - The response from the M-Pesa API.
+- **Example**:
+  ```php
+  $response = $mpesa->send();
+  ```
+- **Notes**: Ensure all required parameters are set before calling this method.
+
+## HasAccountBalance
+
+### Methods
+
+#### `setAccountBalanceInitiator`
+
+- **Description**: Sets the initiator for the account balance check.
+- **Parameters**:
+  - `initiator` (string): The initiator to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setAccountBalanceInitiator('John Doe');
+  ```
+- **Notes**: This method is required for account balance checks.
+
+#### `setAccountBalancePartyA`
+
+- **Description**: Sets the party A for the account balance check.
+- **Parameters**:
+  - `partyA` (string): The party A to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setAccountBalancePartyA('123456');
+  ```
+- **Notes**: This method is required for account balance checks.
+
+#### `setAccountBalanceIdentifierType`
+
+- **Description**: Sets the identifier type for the account balance check.
+- **Parameters**:
+  - `identifierType` (string): The identifier type to set.
+- **Returns**: `\MesaSDK\PhpMpesa\Base\BaseMpesa` - The base M-Pesa instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setAccountBalanceIdentifierType('4');
+  ```
+- **Notes**: This method is required for account balance checks.
+
+#### `setAccountBalanceRemarks`
+
+- **Description**: Sets the remarks for the account balance check.
+- **Parameters**:
+  - `remarks` (string): The remarks to set.
+- **Returns**: `\MesaSDK\PhpMpesa\Base\BaseMpesa` - The base M-Pesa instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setAccountBalanceRemarks('Monthly balance check');
+  ```
+- **Notes**: This method is optional but useful for providing context.
+
+#### `setAccountBalanceOriginatorId`
+
+- **Description**: Sets the originator ID for the account balance check.
+- **Parameters**:
+  - `originatorId` (string): The originator ID to set.
+- **Returns**: `self` - The current instance for method chaining.
+- **Example**:
+  ```php
+  $mpesa->setAccountBalanceOriginatorId('originator123');
+  ```
+- **Notes**: This method is required for account balance checks.
+
+#### `checkAccountBalance`
+
+- **Description**: Checks the account balance.
+- **Parameters**: None
+- **Returns**: `array` - The response from the M-Pesa API.
+- **Example**:
+  ```php
+  $response = $mpesa->checkAccountBalance();
+  ```
+- **Notes**: Ensure all required parameters are set before calling this method.
+
+#### `parseBalanceResult`
+
+- **Description**: Parses the balance result from the M-Pesa API.
+- **Parameters**:
+  - `result` (array): The result to parse.
+- **Returns**: `array` - The parsed balance result.
+- **Example**:
+  ```php
+  $parsedResult = $mpesa->parseBalanceResult($result);
+  ```
+- **Notes**: This method is useful for extracting relevant information from the API response.

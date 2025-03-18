@@ -1,0 +1,48 @@
+# Error Handling
+
+## Overview
+
+The PHP M-Pesa SDK provides robust error handling to ensure that your application can gracefully handle any issues that arise during API interactions. This section covers how to catch and handle exceptions, as well as best practices for error management.
+
+## Exception Types
+
+### MpesaException
+
+- **Description**: A custom exception thrown by the SDK when an error occurs during API interactions.
+- **Usage**: Catch this exception to handle specific errors related to M-Pesa operations.
+- **Example**:
+  ```php
+  try {
+      $response = $mpesa->querySTKStatus('checkoutRequestId');
+  } catch (MpesaException $e) {
+      echo "Error: " . $e->getMessage();
+  }
+  ```
+
+## Best Practices
+
+1. **Always Use Try-Catch Blocks**: Wrap your API calls in try-catch blocks to catch exceptions and handle them appropriately.
+2. **Log Errors**: Implement logging to capture errors for debugging and monitoring.
+3. **User-Friendly Messages**: Provide user-friendly error messages to inform users about what went wrong.
+4. **Check Response Codes**: After making an API call, check the response codes to ensure the operation was successful.
+
+## Example
+
+Here's an example of how to implement error handling in your application:
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
+
+$mpesa = new Mpesa($config);
+
+try {
+    $response = $mpesa->querySTKStatus('checkoutRequestId');
+    // Handle successful response
+} catch (MpesaException $e) {
+    // Log the error
+    error_log("M-Pesa API Error: " . $e->getMessage());
+    // Provide user-friendly message
+    echo "An error occurred while processing your request. Please try again later.";
+}
+```

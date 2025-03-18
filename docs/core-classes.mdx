@@ -1,0 +1,47 @@
+# Core Classes
+
+## MpesaResponse
+
+The `MpesaResponse` class is responsible for handling responses from the M-Pesa API. It provides methods to check the success of a transaction and retrieve error messages.
+
+### Methods
+
+- `isSuccessful(): bool` - Checks if the transaction was successful.
+- `getErrorMessage(): string` - Retrieves the error message if the transaction failed.
+
+## BaseResponse
+
+The `BaseResponse` class serves as the base for all response classes in the SDK. It includes methods for creating instances from API responses and checking transaction success.
+
+### Methods
+
+- `fromArray(array $data): self` - Creates an instance from an API response array.
+- `isSuccessful(): bool` - Checks if the transaction was successful.
+
+## TransactionStatusResponse
+
+The `TransactionStatusResponse` class is used to handle responses related to transaction status queries. It includes properties for transaction details and methods to access them.
+
+### Methods
+
+- `fromArray(array $data): self` - Creates an instance from an API response array.
+- `getTransactionStatus(): string` - Retrieves the status of the transaction.
+
+## C2BValidationResponse
+
+The `C2BValidationResponse` class is responsible for handling responses from C2B validation requests. It includes properties for transaction details and methods to access them.
+
+### Methods
+
+- `fromArray(array $data): self` - Creates an instance from an API response array.
+- `getThirdPartyTransId(): string` - Retrieves the third-party transaction ID.
+
+## C2BSimulationResponse
+
+The `C2BSimulationResponse` class is used to handle responses from C2B simulation requests. It includes properties for customer messages and request IDs.
+
+### Methods
+
+- `fromArray(array $data): self` - Creates an instance from an API response array.
+- `getCustomerMessage(): string` - Retrieves the customer message.
+- `getMerchantRequestId(): string` - Retrieves the merchant request ID.

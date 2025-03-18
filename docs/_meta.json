@@ -1,0 +1,45 @@
+{
+  "index": "Introduction",
+  "core-classes": "Core Classes",
+  "exceptions": "Exceptions",
+  "contracts": "Contracts",
+  "base-classes": "Base Classes",
+  "examples": "Examples",
+  "-- Getting Started": {
+    "type": "separator",
+    "title": "Getting Started"
+  },
+  "introduction": "Overview",
+  "installation": "Installation",
+  "basic-usage": "Basic Usage",
+  "-- Core Concepts": {
+    "type": "separator",
+    "title": "Core Concepts"
+  },
+  "authentication": "Authentication",
+  "configuration": "Configuration",
+  "logging": "Logging",
+  "-- API Reference": {
+    "type": "separator",
+    "title": "API Reference"
+  },
+  "stk-push": "STK Push",
+  "b2c": "B2C Operations",
+  "c2b": "C2B Operations",
+  "transaction-status": "Transaction Status",
+  "account-balance": "Account Balance",
+  "-- Guides": {
+    "type": "separator",
+    "title": "Guides"
+  },
+  "error-handling": "Error Handling",
+  "callbacks": "Callbacks",
+  "testing": "Testing",
+  "-- Resources": {
+    "type": "separator",
+    "title": "Resources"
+  },
+  "faq": "FAQ",
+  "contributing": "Contributing",
+  "changelog": "Changelog"
+}
