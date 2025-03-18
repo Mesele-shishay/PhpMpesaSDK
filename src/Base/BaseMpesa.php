@@ -309,9 +309,11 @@ abstract class BaseMpesa implements MpesaInterface
     protected function executeRequest(string $method, string $endpoint, array $payload): array|string
     {
         try {
-            // Ensure we have a valid access token
-            if ($this->auth->isExpired()) {
+            // Ensure we have a valid access token only if auto_authenticate is enabled
+            if ($this->auth->isExpired() && $this->config->getAutoAuthenticate()) {
                 $this->authenticate();
+            } elseif ($this->auth->isExpired()) {
+                throw new MpesaException('Authentication token is expired. Please call authenticate() manually.');
             }
 
             $response = $this->auth->makeRequest($method, $endpoint, $payload);

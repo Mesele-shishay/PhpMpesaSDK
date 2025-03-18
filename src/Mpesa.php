@@ -155,10 +155,13 @@ class Mpesa extends BaseMpesa
             'ShortCode' => $this->config->getShortcode(),
             'ResponseType' => 'Completed',
             'ConfirmationURL' => $confirmationUrl,
+            'CommandID' => 'RegisterURL',
             'ValidationURL' => $validationUrl
         ];
 
-        return $this->executeRequest('POST', '/c2b/v1/registerurl', $payload);
+        print_r($payload);
+
+        return $this->executeRequest('POST', '/v1/c2b-register-url/register?apikey=' . $this->getApiKey(), $payload);
     }
 
     /**
@@ -484,8 +487,8 @@ class Mpesa extends BaseMpesa
     protected function executeRequest(string $method, string $endpoint, array $payload): array
     {
         try {
-            // Ensure we have a valid access token
-            if ($this->auth->isExpired()) {
+            // Ensure we have a valid access token only if auto_authenticate is enabled
+            if ($this->auth->isExpired() && $this->config->getAutoAuthenticate()) {
                 $this->authenticate();
             }
 
@@ -516,7 +519,7 @@ class Mpesa extends BaseMpesa
 
     public function setQueueTimeOutUrl(?string $url): BaseMpesa
     {
-        $this->queueTimeOutUrl = $url;
+        $this->timeoutUrl = $url;
         return $this;
     }
 

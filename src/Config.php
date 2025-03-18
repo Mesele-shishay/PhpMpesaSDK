@@ -34,6 +34,9 @@ class Config
     /** @var bool Whether to verify SSL certificates */
     private bool $verify_ssl;
 
+    /** @var bool Whether to automatically authenticate when needed */
+    private bool $auto_authenticate = true;
+
     /** @var string Directory for storing log files */
     private string $log_dir;
 
@@ -583,5 +586,27 @@ class Config
             'directory' => $this->cache_dir,
             'ttl' => $this->cache_ttl
         ];
+    }
+
+    /**
+     * Set whether to automatically authenticate when needed
+     * 
+     * @param bool $auto_authenticate Whether to automatically authenticate
+     * @return self Returns the current instance for method chaining
+     */
+    public function setAutoAuthenticate(bool $auto_authenticate): self
+    {
+        $this->auto_authenticate = $auto_authenticate;
+        return $this;
+    }
+
+    /**
+     * Get whether to automatically authenticate when needed
+     * 
+     * @return bool Returns true if auto authentication is enabled, false otherwise
+     */
+    public function getAutoAuthenticate(): bool
+    {
+        return $this->auto_authenticate;
     }
 }

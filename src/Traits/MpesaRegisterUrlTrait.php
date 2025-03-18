@@ -69,7 +69,7 @@ trait MpesaRegisterUrlTrait
             'ValidationURL' => $validationUrl
         ];
 
-        return $this->makeRequest('POST', '/c2b/v1/registerurl', $payload);
+        return $this->makeRequest('POST', '/v1/c2b-register-url/register?apikey=' . $this->apiKey, $payload);
     }
 
     /**

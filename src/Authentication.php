@@ -197,7 +197,7 @@ class Authentication
      */
     public function getToken(): string
     {
-        if (empty($this->accessToken)) {
+        if (empty($this->accessToken) && $this->config->getAutoAuthenticate()) {
             throw new \RuntimeException('No access token available. Call authenticate() first.');
         }
         return $this->accessToken;

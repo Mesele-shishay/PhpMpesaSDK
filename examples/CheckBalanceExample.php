@@ -36,19 +36,19 @@ try {
     echo "API Response:\n";
     echo json_encode($response, JSON_PRETTY_PRINT) . "\n\n";
 
-    // If this is a result callback
-    if (isset($response['Result'])) {
-        $balanceInfo = $mpesa->parseBalanceResult($response);
-        echo "Parsed Balance Information:\n";
-        foreach ($balanceInfo as $account) {
-            echo sprintf(
-                "Account: %s\nCurrency: %s\nAmount: %s\n\n",
-                $account['account'],
-                $account['currency'],
-                $account['amount']
-            );
-        }
-    }
+    // // If this is a result callback
+    // if (isset($response['Result'])) {
+    //     $balanceInfo = $mpesa->parseBalanceResult($response);
+    //     echo "Parsed Balance Information:\n";
+    //     foreach ($balanceInfo as $account) {
+    //         echo sprintf(
+    //             "Account: %s\nCurrency: %s\nAmount: %s\n\n",
+    //             $account['account'],
+    //             $account['currency'],
+    //             $account['amount']
+    //         );
+    //     }
+    // }
 } catch (\Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
 }

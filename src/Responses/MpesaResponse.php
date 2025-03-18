@@ -131,21 +131,38 @@ class MpesaResponse implements \ArrayAccess
         return $this->rawResponse['data'] ?? [];
     }
 
+    /**
+     * @param mixed $offset
+     * @return bool
+     */
     public function offsetExists($offset): bool
     {
         return isset($this->rawResponse[$offset]);
     }
 
-    public function offsetGet($offset): mixed
+    /**
+     * @param mixed $offset
+     * @return mixed
+     */
+    public function offsetGet($offset): array|null
     {
         return $this->rawResponse[$offset] ?? null;
     }
 
+    /**
+     * @param mixed $offset
+     * @param mixed $value
+     * @return void
+     */
     public function offsetSet($offset, $value): void
     {
         $this->rawResponse[$offset] = $value;
     }
 
+    /**
+     * @param mixed $offset
+     * @return void
+     */
     public function offsetUnset($offset): void
     {
         unset($this->rawResponse[$offset]);

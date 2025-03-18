@@ -161,9 +161,14 @@ trait B2CTrait
         return $this;
     }
 
+    /**
+     * Get the amount
+     *
+     * @return float
+     */
     public function getAmount(): float
     {
-        return $this->getAmount();
+        return $this->amount;
     }
 
     /**
@@ -253,7 +258,7 @@ trait B2CTrait
             'PartyA' => $this->partyA,
             'PartyB' => $this->partyB,
             'Remarks' => $this->remarks,
-            'QueueTimeOutURL' => $this->queueTimeOutUrl,
+            'QueueTimeOutURL' => $this->timeoutUrl,
             'ResultURL' => $this->resultUrl,
             'Occassion' => $this->occasion
         ];
@@ -272,6 +277,7 @@ trait B2CTrait
         $data = array_merge($this->getB2CData(), [
             'OriginatorConversationID' => $this->generateOriginatorConversationId()
         ]);
+
 
         // Set default URLs if not provided
         $data['QueueTimeOutURL'] = $data['QueueTimeOutURL'] ?? $this->config->get('queue_timeout_url');
@@ -346,17 +352,17 @@ trait B2CTrait
     /**
      * Initiates a Business to Customer (B2C) payment
      *
-     * @param string $initiatorName The name of the initiator initiating the request
-     * @param string $securityCredential The encrypted security credential
-     * @param string $commandId The type of B2C transaction (BusinessPayment, SalaryPayment, PromotionPayment)
-     * @param float $amount The amount to be sent to the customer
-     * @param string $partyA The organization's shortcode
-     * @param string $partyB The customer's phone number
-     * @param string $remarks Additional information about the transaction
-     * @param string $occasion Additional information about the transaction
+     * @param string|null $initiatorName The name of the initiator initiating the request
+     * @param string|null $securityCredential The encrypted security credential
+     * @param string|null $commandId The type of B2C transaction (BusinessPayment, SalaryPayment, PromotionPayment)
+     * @param float|null $amount The amount to be sent to the customer
+     * @param string|null $partyA The organization's shortcode
+     * @param string|null $partyB The customer's phone number
+     * @param string|null $remarks Additional information about the transaction
+     * @param string|null $occasion Additional information about the transaction
      * @param string|null $queueTimeoutUrl URL for timeout notifications
      * @param string|null $resultUrl URL for result notifications
-     * @return MpesaResponse The API response
+     * @return \MesaSDK\PhpMpesa\Responses\MpesaResponse The API response
      * @throws MpesaException
      */
     public function b2c(
@@ -370,31 +376,40 @@ trait B2CTrait
         ?string $occasion = null,
         ?string $queueTimeoutUrl = null,
         ?string $resultUrl = null
-    ): MpesaResponse {
+    ): \MesaSDK\PhpMpesa\Responses\MpesaResponse {
         // If parameters are provided directly, set them
-        if ($initiatorName !== null)
+        if ($initiatorName !== null) {
             $this->setInitiatorName($initiatorName);
-        if ($securityCredential !== null)
+        }
+        if ($securityCredential !== null) {
             $this->setSecurityCredential($securityCredential);
-        if ($commandId !== null)
+        }
+        if ($commandId !== null) {
             $this->setCommandID($commandId);
-        if ($amount !== null)
+        }
+        if ($amount !== null) {
             $this->setAmount($amount);
-        if ($partyA !== null)
+        }
+        if ($partyA !== null) {
             $this->setPartyA($partyA);
-        if ($partyB !== null)
+        }
+        if ($partyB !== null) {
             $this->setPartyB($partyB);
-        if ($remarks !== null)
+        }
+        if ($remarks !== null) {
             $this->setRemarks($remarks);
-        if ($occasion !== null)
+        }
+        if ($occasion !== null) {
             $this->setOccasion($occasion);
-        if ($queueTimeoutUrl !== null)
+        }
+        if ($queueTimeoutUrl !== null) {
             $this->setQueueTimeOutUrl($queueTimeoutUrl);
-        if ($resultUrl !== null)
+        }
+        if ($resultUrl !== null) {
             $this->setResultUrl($resultUrl);
+        }
 
         // Validate and send the request
-        $this->validateB2CData();
         return $this->send();
     }
 

@@ -76,7 +76,8 @@ trait HasAccountBalance
             'ResultURL' => $this->getResultUrl()
         ];
 
-        $response = $this->makeRequest('/accountbalance/v1/query', $payload);
+
+        $response = $this->makeRequest('/mpesa/accountbalance/v2/query', $payload);
 
         // Format response to match expected structure
         return [

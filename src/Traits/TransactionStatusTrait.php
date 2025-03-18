@@ -138,7 +138,7 @@ trait TransactionStatusTrait
             if (empty($this->resultUrl)) {
                 throw new MpesaException('Result URL is required for transaction status query');
             }
-            if (empty($this->timeoutUrl)) {
+            if (empty($this->queueTimeOutUrl)) {
                 throw new MpesaException('Timeout URL is required for transaction status query');
             }
 
@@ -151,7 +151,7 @@ trait TransactionStatusTrait
                 'PartyA' => $this->config->getShortcode(),
                 'IdentifierType' => $this->identifierType,
                 'ResultURL' => $this->resultUrl,
-                'QueueTimeOutURL' => $this->timeoutUrl,
+                'QueueTimeOutURL' => $this->queueTimeOutUrl,
                 'Remarks' => $this->statusRemarks,
                 'Occasion' => $this->statusOccasion ?? ''
             ];
@@ -165,7 +165,6 @@ trait TransactionStatusTrait
                     'Content-Type' => 'application/json'
                 ]
             ]);
-
             $decodedResponse = json_decode($response->getBody(), true);
 
             if (!$decodedResponse) {
