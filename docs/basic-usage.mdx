@@ -21,26 +21,97 @@ $config->setBaseUrl("https://apisandbox.safaricom.et")
 $mpesa = new Mpesa($config);
 
 try {
-    // Authenticate
-    $mpesa->authenticate();
+    // 1. Initialize configuration
+    $config = new Config();
+    $config->setEnvironment($settings['environment'])
+        ->setBaseUrl($settings['base_url'])
+        ->setConsumerKey($settings['consumer_key'])
+        ->setConsumerSecret($settings['consumer_secret'])
+        ->setShortCode($settings['shortcode'])
+        ->setVerifySSL(false); // Note: Always use true in production
 
-    // Set up STK Push parameters
-    $mpesa->setPhoneNumber("251700404709")
-        ->setAmount(10)
-        ->setCallbackUrl("https://your-domain.com/callback")
-        ->setTransactionDesc("Payment for goods")
-        ->setAccountReference("123456");
+    // 2. Initialize M-Pesa client
+    $mpesa = new Mpesa($config);
 
-    // Initiate STK Push
-    $result = $mpesa->stkPush();
+    // Add debug logging
+    error_log("Attempting authentication...");
 
-    if ($result->isSuccessful()) {
-        echo "STK Push initiated successfully!";
-    } else {
-        echo "Error: " . $result->getErrorMessage();
+    // 3. Set up the transaction details
+    try {
+        $authResult = $mpesa->authenticate();
+        error_log("Authentication result: " . json_encode($authResult));
+
+        $mpesa->setPhoneNumber('251700404709')  // Customer's phone number (format: 2517XXXXXXXX)
+            ->setAmount(20.00)                // Amount to be charged
+            ->setAccountReference('INV' . time())   // Dynamic reference
+            ->setTransactionDesc('Payment for Monthly Package')  // Description shown to customer
+            ->setCallbackUrl($settings['callback_url']);
+
+        // 4. For sandbox testing only - set test credentials
+        if ($config->getEnvironment() === 'sandbox') {
+            // Try without the test password first
+            $mpesa->setTestPassword('M2VkZGU2YWY1Y2RhMzIyOWRjMmFkMTRiMjdjOWIwOWUxZDFlZDZiNGQ0OGYyMDRiNjg0ZDZhNWM2NTQyNTk2ZA==');
+        }
+
+        error_log("Initiating STK Push...");
+        // 5. Initiate the STK Push
+        $response = $mpesa->ussdPush();
+        error_log("STK Push Response: " . json_encode($response));
+
+        // 6. Handle the response
+        if ($mpesa->isSuccessful()) {
+            echo "✅ Transaction initiated successfully!\n\n";
+            echo "Transaction Details:\n";
+            echo "-------------------\n";
+            echo "🔖 Merchant Request ID: " . $mpesa->getMerchantRequestID() . "\n";
+            echo "🔖 Checkout Request ID: " . $mpesa->getCheckoutRequestID() . "\n\n";
+
+            // Store these IDs for later use in callback handling
+
+            // 7. Check for callback data (if synchronous)
+            $callbackData = $mpesa->getCallbackData();
+            if (!empty($callbackData)) {
+                echo "Callback Response:\n";
+                echo "----------------\n";
+                print_r($callbackData);
+
+                if ($mpesa->isCanceledByUser()) {
+                    echo "❌ Transaction was canceled by the user\n";
+                }
+
+                echo "Result Code: " . $mpesa->getResultCode() . "\n";
+                echo "Result Description: " . $mpesa->getResultDesc() . "\n";
+            } else {
+                echo "ℹ️ Waiting for customer to complete the payment...\n";
+                echo "Check STKPushCallbackExample.php for callback handling\n";
+            }
+        } else {
+            echo "❌ Transaction initiation failed!\n";
+            echo "Error: " . $mpesa->getResultDesc() . "\n";
+        }
+
+    } catch (MpesaException $e) {
+        echo "❌ M-Pesa API Error: " . $e->getMessage() . "\n";
+        // Log the error for debugging
+        error_log("M-Pesa Error: " . $e->getMessage());
+    } catch (RuntimeException $e) {
+        echo "❌ Runtime Error: " . $e->getMessage() . "\n";
+        error_log("Runtime Error: " . $e->getMessage());
+    } catch (Exception $e) {
+        echo "❌ Unexpected Error: " . $e->getMessage() . "\n";
+        error_log("Unexpected Error: " . $e->getMessage());
     }
+
 } catch (MpesaException $e) {
-    echo "Error: " . $e->getMessage();
+    echo "❌ M-Pesa API Error: " . $e->getMessage() . "\n";
+    // Log the error for debugging
+    error_log("M-Pesa Error: " . $e->getMessage());
+} catch (RuntimeException $e) {
+    echo "❌ Runtime Error: " . $e->getMessage() . "\n";
+    error_log("Runtime Error: " . $e->getMessage());
+} catch (Exception $e) {
+    echo "❌ Unexpected Error: " . $e->getMessage() . "\n";
+    error_log("Unexpected Error: " . $e->getMessage());
 }
 ```
 
@@ -58,25 +129,60 @@ $mpesa->processCallback($callbackData);
 
 ```php
 try {
+    // 1. Authenticate with M-Pesa API
     $mpesa->authenticate();
 
-    $mpesa->setInitiatorName("apitest")
-        ->setSecurityCredential("your_security_credential")
-        ->setCommandId("BusinessPayment")
-        ->setAmount(100)
-        ->setPartyA("1020")
-        ->setPartyB("251700404709")
-        ->setRemarks("Salary payment")
-        ->setQueueTimeOutUrl("https://your-domain.com/timeout")
-        ->setResultUrl("https://your-domain.com/result");
+    // 2. Set up B2C payment parameters
+    $params = [
+        'initiatorName' => 'apitest',  // Your registered initiator name
+        'securityCredential' => 'lMhf0UqE4ydeEDwpUskmPgkNDZnA6NLi7z3T1TQuWCkH3/ScW8pRRnobq/AcwFvbC961+zDMgOEYGm8Oivb7L/7Y9ED3lhR7pJvnH8B1wYis5ifdeeWI6XE2NSq8X1Tc7QB9Dg8SlPEud3tgloB2DlT+JIv3ebIl/J/8ihGVrq499bt1pz/EA2nzkCtGeHRNbEDxkqkEnbioV0OM//0bv4K++XyV6jUFlIIgkDkmcK6aOU8mPBHs2um9aP+Y+nTJaa6uHDudRFg0+3G6gt1zRCPs8AYbts2IebseBGfZKv5K6Lqk9/W8657gEkrDZE8Mi78MVianqHdY/8d6D9KKhw==',
+        'commandId' => 'BusinessPayment',  // Options: SalaryPayment, BusinessPayment, PromotionPayment
+        'amount' => 10,
+        'partyA' => '1020',  // Your shortcode
+        'partyB' => '251700404709',  // Recipient phone number
+        'remarks' => 'Bonus payment',  // Payment description
+        'occasion' => 'StallOwner',  // Optional reference
+        'queueTimeOutURL' => 'https://testt.tugza.tech/',  // Timeout callback URL
+        'resultURL' => 'https://testt.tugza.tech/'  // Success callback URL
+    ];
 
-    $result = $mpesa->b2c();
+    // 3. Initiate the B2C payment using fluent interface
+    $result = $mpesa
+        ->setInitiatorName($params['initiatorName'])
+        ->setSecurityCredential($params['securityCredential'])
+        ->setCommandId($params['commandId'])
+        ->setAmount($params['amount'])
+        ->setPartyA($params['partyA'])
+        ->setPartyB($params['partyB'])
+        ->setRemarks($params['remarks'])
+        ->setOccasion($params['occasion'])
+        ->setQueueTimeOutUrl($params['queueTimeOutURL'])
+        ->setResultUrl($params['resultURL'])
+        ->b2c();
 
-    if ($result->isSuccessful()) {
-        echo "B2C payment initiated successfully!";
+    // 4. Handle the response
+    if ($result && $result->getResponseMessage()) {
+        echo "✅ B2C payment initiated successfully!\n";
+        echo "Response: \n";
+        print_r($result->getResponseMessage());
+
+        // Store these details in your database for reconciliation
+        // $conversationId = $result->getConversationId();
+        // $originatorConversationId = $result->getOriginatorConversationId();
     }
+
 } catch (MpesaException $e) {
-    echo "Error: " . $e->getMessage();
+    // Handle M-Pesa specific errors
+    echo "❌ M-Pesa Error:\n";
+    echo "Message: " . $e->getMessage() . "\n";
+    echo "Code: " . $e->getCode() . "\n";
+
+    // Log the error for debugging
+    error_log("M-Pesa B2C Error: " . $e->getMessage());
+} catch (Exception $e) {
+    // Handle unexpected errors
+    echo "❌ Unexpected Error: " . $e->getMessage() . "\n";
+    error_log("Unexpected B2C Error: " . $e->getMessage());
 }
 ```
 
@@ -86,42 +192,70 @@ try {
 
 ```php
 try {
-    $mpesa->authenticate();
+    // Initialize the class with your API credentials
+    $mpesa = new Mpesa($config);
+    $mpesa->setApiKey('7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi');
 
-    $mpesa->setShortCode("123456")
-        ->setResponseType("Completed")
-        ->setConfirmationUrl("https://your-domain.com/confirm")
-        ->setValidationUrl("https://your-domain.com/validate");
+    // Manually authenticate before making any requests
 
-    $result = $mpesa->registerUrls();
-
-    if ($result->isSuccessful()) {
-        echo "URLs registered successfully!";
+    // Register URLs using the public method
+    $response = $mpesa->setShortcode('6989')
+        ->registerUrls(
+            'https://your-domain.com/confirmation',  // confirmationUrl
+            'https://your-domain.com/validation'     // validationUrl
+        );
+    // Handle the response
+    if (is_array($response)) {
+        echo "Success: " . ($response['ResponseDescription'] ?? 'URL registration successful') . "\n";
+    } else {
+        echo "Response: " . $response . "\n";
     }
 } catch (MpesaException $e) {
-    echo "Error: " . $e->getMessage();
+    echo "Error: " . $e->getMessage() . "\n";
 }
 ```
 
 ### Simulating C2B Transaction
 
 ```php
+
 try {
+    // 1. First, authenticate with M-Pesa API
     $mpesa->authenticate();
 
-    $mpesa->setShortCode("123456")
-        ->setCommandId("CustomerPayBillOnline")
-        ->setAmount(100)
-        ->setMsisdn("251700404709")
-        ->setBillReference("123456");
+    // 2. Simulate a C2B payment using the fluent interface (recommended)
+    /** @var C2BSimulationResponse $response */
+    $response = $mpesa
+        ->setC2BAmount(110.00)                // Set amount
+        ->setC2BMsisdn('251745628580')       // Set customer phone number
+        ->setC2BBillRefNumber('091091')      // Set bill reference number
+        ->executeC2BSimulation();            // Execute the simulation
 
-    $result = $mpesa->simulateC2B();
+    // 3. Handle the response using the model methods
+    if ($response->isSuccessful()) {
+        echo "✅ C2B payment simulation initiated successfully!\n";
+        echo "Response Code: " . $response->getResponseCode() . "\n";
+        echo "Description: " . $response->getResponseDescription() . "\n";
+        echo "Conversation ID: " . $response->getConversationId() . "\n";
+        echo "Originator Conversation ID: " . $response->getOriginatorConversationId() . "\n";
+        echo "Customer Message: " . $response->getCustomerMessage() . "\n";
+        echo "Merchant Request ID: " . $response->getMerchantRequestId() . "\n";
+        echo "Checkout Request ID: " . $response->getCheckoutRequestId() . "\n";
 
-    if ($result->isSuccessful()) {
-        echo "C2B simulation successful!";
+        // You can also get the response as an array
+        $responseArray = $response->toArray();
+        echo "\nFull Response Array:\n";
+        print_r($responseArray);
+    } else {
+        echo "❌ C2B payment simulation failed!\n";
+        echo "Error Code: " . $response->getResponseCode() . "\n";
+        echo "Error Description: " . $response->getResponseDescription() . "\n";
     }
+
 } catch (MpesaException $e) {
-    echo "Error: " . $e->getMessage();
+    echo "❌ M-Pesa Error: " . $e->getMessage() . "\n";
+} catch (\Exception $e) {
+    echo "❌ Error: " . $e->getMessage() . "\n";
 }
 ```
 
@@ -131,23 +265,69 @@ try {
 
 ```php
 try {
+    // Initialize configuration
+    $config = new Config();
+    $config->setEnvironment($settings['environment'])
+        ->setBaseUrl($settings['base_url'])
+        ->setConsumerKey($settings['consumer_key'])
+        ->setConsumerSecret($settings['consumer_secret'])
+        ->setShortCode($settings['shortcode'])
+        ->setVerifySSL(false); // Note: Always use true in production
+
+    // Initialize M-Pesa client
+    $mpesa = new Mpesa($config);
+
+    // Authenticate
     $mpesa->authenticate();
 
-    $mpesa->setInitiatorName("apitest")
-        ->setSecurityCredential("your_security_credential")
-        ->setTransactionId("your_transaction_id")
-        ->setPartyA("1020")
-        ->setIdentifierType("1")
-        ->setResultUrl("https://your-domain.com/result")
-        ->setQueueTimeOutUrl("https://your-domain.com/timeout");
+    // Query transaction status using fluent API
+    /** @var TransactionStatusResponse $response */
+    $response = $mpesa
+        ->setStatusInitiator('apitest')
+        ->setStatusSecurityCredential('lMhf0UqE4ydeEDwpUskmPgkNDZnA6NLi7z3T1TQuWCkH3/ScW8pRRnobq/AcwFvbC961+zDMgOEYGm8Oivb7L/7Y9ED3lhR7pJvnH8B1wYis5ifdeeWI6XE2NSq8X1Tc7QB9Dg8SlPEud3tgloB2DlT+JIv3ebIl/J/8ihGVrq499bt1pz/EA2nzkCtGeHRNbEDxkqkEnbioV0OM//0bv4K++XyV6jUFlIIgkDkmcK6aOU8mPBHs2um9aP+Y+nTJaa6uHDudRFg0+3G6gt1zRCPs8AYbts2IebseBGfZKv5K6Lqk9/W8657gEkrDZE8Mi78MVianqHdY/8d6D9KKhw==')
+        ->setTransactionId('0')
+        ->setResultUrl($settings['result_url'])
+        ->setQueueTimeOutUrl($settings['timeout_url'])
+        ->setRemarks('Transaction Status Query')
+        ->setStatusOccasion('Query trans status')
+        ->queryTransactionStatus();
 
-    $result = $mpesa->checkTransactionStatus();
+    // Check if request was successful
+    if ($response->isSuccessful()) {
+        echo "Transaction status query initiated successfully\n";
 
-    if ($result->isSuccessful()) {
-        echo "Transaction status: " . $result->getTransactionStatus();
+        // Access specific transaction details using the model methods
+        echo "Transaction Status: " . $response->getTransactionStatus() . "\n";
+        echo "Amount: " . $response->getAmount() . "\n";
+        echo "Transaction Date: " . $response->getTransactionDate() . "\n";
+        echo "Phone Number: " . $response->getPhoneNumber() . "\n";
+        echo "Receipt Number: " . $response->getReceiptNumber() . "\n";
+        echo "Debit Party: " . $response->getDebitPartyName() . "\n";
+        echo "Credit Party: " . $response->getCreditPartyName() . "\n";
+
+        // Check if transaction is completed
+        if ($response->isCompleted()) {
+            echo "Transaction is completed\n";
+        } else {
+            echo "Transaction is not completed\n";
+        }
+
+        // Get any additional parameter
+        $customParam = $response->getResultParameter('CustomKey', 'default value');
+        echo "Custom Parameter: " . $customParam . "\n";
+
+        // Get all data as array or JSON
+        echo "All Data (JSON): " . $response->toJson() . "\n";
+    } else {
+        echo "Transaction status query failed\n";
+        echo "Error Code: " . $response->getResultCode() . "\n";
+        echo "Error Description: " . $response->getResultDesc() . "\n";
     }
+
 } catch (MpesaException $e) {
-    echo "Error: " . $e->getMessage();
+    echo "M-Pesa Error: " . $e->getMessage() . "\n";
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
 }
 ```
 
@@ -157,23 +337,42 @@ try {
 
 ```php
 try {
-    $mpesa->authenticate();
+    // Initialize the CustomMpesa class with configuration
+    $mpesa = new Mpesa($config);
 
-    $mpesa->setInitiatorName("apitest")
-        ->setSecurityCredential("your_security_credential")
-        ->setPartyA("1020")
-        ->setIdentifierType("4")
-        ->setRemarks("Balance check")
-        ->setQueueTimeOutUrl("https://your-domain.com/timeout")
-        ->setResultUrl("https://your-domain.com/result");
+    // Configure account balance specific parameters using fluent interface
+    $response = $mpesa
+        ->authenticate()
+        ->setSecurityCredential("lMhf0UqE4ydeEDwpUskmPgkNDZnA6NLi7z3T1TQuWCkH3/ScW8pRRnobq/AcwFvbC961+zDMgOEYGm8Oivb7L/7Y9ED3lhR7pJvnH8B1wYis5ifdeeWI6XE2NSq8X1Tc7QB9Dg8SlPEud3tgloB2DlT+JIv3ebIl/J/8ihGVrq499bt1pz/EA2nzkCtGeHRNbEDxkqkEnbioV0OM//0bv4K++XyV6jUFlIIgkDkmcK6aOU8mPBHs2um9aP+Y+nTJaa6uHDudRFg0+3G6gt1zRCPs8AYbts2IebseBGfZKv5K6Lqk9/W8657gEkrDZE8Mi78MVianqHdY/8d6D9KKhw==")
+        ->setAccountBalanceInitiator('apitest')
+        ->setAccountBalancePartyA('1020')
+        ->setAccountBalanceRemarks('Monthly balance check')
+        // Optional parameters
+        ->setAccountBalanceIdentifierType('4')
+        ->setAccountBalanceRemarks('Monthly balance check')
+        ->setQueueTimeOutUrl('https://your-domain.com/timeout')
+        ->setResultUrl('https://your-domain.com/result')
+        // Execute the balance check
+        ->checkAccountBalance();
 
-    $result = $mpesa->checkAccountBalance();
+    echo "API Response:\n";
+    echo json_encode($response, JSON_PRETTY_PRINT) . "\n\n";
 
-    if ($result->isSuccessful()) {
-        echo "Account balance: " . $result->getBalance();
-    }
-} catch (MpesaException $e) {
-    echo "Error: " . $e->getMessage();
+    // // If this is a result callback
+    // if (isset($response['Result'])) {
+    //     $balanceInfo = $mpesa->parseBalanceResult($response);
+    //     echo "Parsed Balance Information:\n";
+    //     foreach ($balanceInfo as $account) {
+    //         echo sprintf(
+    //             "Account: %s\nCurrency: %s\nAmount: %s\n\n",
+    //             $account['account'],
+    //             $account['currency'],
+    //             $account['amount']
+    //         );
+    //     }
+    // }
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
 }
 ```
 

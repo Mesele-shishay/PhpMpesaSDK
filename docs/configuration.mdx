@@ -64,8 +64,7 @@ $config->setCallbackUrl("https://your-domain.com/callback")
 ```php
 // Configure logging
 $logger = new MpesaLogger();
-$logger->setLogPath('/path/to/logs')
-    ->setLogLevel('debug');
+$logger->setLogPath('/path/to/logs');
 
 $config->setLogger($logger);
 ```
@@ -79,11 +78,6 @@ $config->setTimeout(30);
 // Set retry attempts
 $config->setRetryAttempts(3);
 
-// Set custom headers
-$config->setHeaders([
-    'X-Request-ID' => uniqid(),
-    'X-Client-Version' => '1.0.0'
-]);
 ```
 
 ## Environment Variables
@@ -91,10 +85,10 @@ $config->setHeaders([
 ### Using Environment Variables
 
 ```php
-$config->setBaseUrl(getenv('MPESA_BASE_URL'))
-    ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
-    ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
-    ->setEnvironment(getenv('MPESA_ENVIRONMENT'));
+$config->setBaseUrl($_ENV['MPESA_BASE_URL'])
+    ->setConsumerKey($_ENV['MPESA_CONSUMER_KEY'])
+    ->setConsumerSecret($_ENV['MPESA_CONSUMER_SECRET'])
+    ->setEnvironment($_ENV['MPESA_ENVIRONMENT']);
 ```
 
 ### Environment File Example
@@ -139,8 +133,8 @@ try {
 
 ```php
 $config->setTimeout(30)
-    ->setRetryAttempts(3)
-    ->setRetryDelay(1000);  // milliseconds
+    ->setRetryAttempts(3);
+
 ```
 
 ### 2. Monitoring Settings
@@ -148,8 +142,8 @@ $config->setTimeout(30)
 ```php
 $logger = new MpesaLogger();
 $logger->setLogPath('/path/to/logs')
-    ->setLogLevel('info')
-    ->setLogFormat('json');
+    ->setLogLevel('info');
+
 
 $config->setLogger($logger);
 ```

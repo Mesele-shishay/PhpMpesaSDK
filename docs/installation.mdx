@@ -12,7 +12,7 @@
 1. Install the package via Composer:
 
 ```bash
-composer require mesa/php-mpesa
+composer require mesasdk/php-mpesa
 ```
 
 2. Configure your environment variables:
@@ -45,8 +45,8 @@ $mpesa = new Mpesa($config);
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/php-mpesa.git
-cd php-mpesa
+git clone https://github.com/Mesele-shishay/PhpMpesaSDK.git
+cd PhpMpesaSDK
 ```
 
 2. Install dependencies:
@@ -72,7 +72,7 @@ $config->setVerifySSL(true);
 2. **Environment Variables**: Use environment variables for sensitive data:
 
 ```php
-$config->setConsumerKey(getenv('MPESA_CONSUMER_KEY'));
+$config->setConsumerKey($_ENV['MPESA_CONSUMER_KEY']);
 ```
 
 3. **Error Handling**: Implement proper error handling:
