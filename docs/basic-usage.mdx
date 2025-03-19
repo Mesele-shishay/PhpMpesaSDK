@@ -1,0 +1,205 @@
+# Basic Usage
+
+## Overview
+
+This guide demonstrates the basic usage of the M-Pesa SDK for common operations like STK Push, B2C, and C2B transactions.
+
+## STK Push (Customer to Business)
+
+### Initiating an STK Push
+
+```php
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox');
+
+$mpesa = new Mpesa($config);
+
+try {
+    // Authenticate
+    $mpesa->authenticate();
+
+    // Set up STK Push parameters
+    $mpesa->setPhoneNumber("251700404709")
+        ->setAmount(10)
+        ->setCallbackUrl("https://your-domain.com/callback")
+        ->setTransactionDesc("Payment for goods")
+        ->setAccountReference("123456");
+
+    // Initiate STK Push
+    $result = $mpesa->stkPush();
+
+    if ($result->isSuccessful()) {
+        echo "STK Push initiated successfully!";
+    } else {
+        echo "Error: " . $result->getErrorMessage();
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
+```
+
+### Handling STK Push Callback
+
+```php
+// In your callback endpoint
+$callbackData = json_decode(file_get_contents('php://input'), true);
+$mpesa->processCallback($callbackData);
+```
+
+## B2C (Business to Customer)
+
+### Initiating a B2C Payment
+
+```php
+try {
+    $mpesa->authenticate();
+
+    $mpesa->setInitiatorName("apitest")
+        ->setSecurityCredential("your_security_credential")
+        ->setCommandId("BusinessPayment")
+        ->setAmount(100)
+        ->setPartyA("1020")
+        ->setPartyB("251700404709")
+        ->setRemarks("Salary payment")
+        ->setQueueTimeOutUrl("https://your-domain.com/timeout")
+        ->setResultUrl("https://your-domain.com/result");
+
+    $result = $mpesa->b2c();
+
+    if ($result->isSuccessful()) {
+        echo "B2C payment initiated successfully!";
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
+```
+
+## C2B (Customer to Business)
+
+### Registering URLs
+
+```php
+try {
+    $mpesa->authenticate();
+
+    $mpesa->setShortCode("123456")
+        ->setResponseType("Completed")
+        ->setConfirmationUrl("https://your-domain.com/confirm")
+        ->setValidationUrl("https://your-domain.com/validate");
+
+    $result = $mpesa->registerUrls();
+
+    if ($result->isSuccessful()) {
+        echo "URLs registered successfully!";
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
+```
+
+### Simulating C2B Transaction
+
+```php
+try {
+    $mpesa->authenticate();
+
+    $mpesa->setShortCode("123456")
+        ->setCommandId("CustomerPayBillOnline")
+        ->setAmount(100)
+        ->setMsisdn("251700404709")
+        ->setBillReference("123456");
+
+    $result = $mpesa->simulateC2B();
+
+    if ($result->isSuccessful()) {
+        echo "C2B simulation successful!";
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
+```
+
+## Transaction Status Query
+
+### Checking Transaction Status
+
+```php
+try {
+    $mpesa->authenticate();
+
+    $mpesa->setInitiatorName("apitest")
+        ->setSecurityCredential("your_security_credential")
+        ->setTransactionId("your_transaction_id")
+        ->setPartyA("1020")
+        ->setIdentifierType("1")
+        ->setResultUrl("https://your-domain.com/result")
+        ->setQueueTimeOutUrl("https://your-domain.com/timeout");
+
+    $result = $mpesa->checkTransactionStatus();
+
+    if ($result->isSuccessful()) {
+        echo "Transaction status: " . $result->getTransactionStatus();
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
+```
+
+## Account Balance Query
+
+### Checking Account Balance
+
+```php
+try {
+    $mpesa->authenticate();
+
+    $mpesa->setInitiatorName("apitest")
+        ->setSecurityCredential("your_security_credential")
+        ->setPartyA("1020")
+        ->setIdentifierType("4")
+        ->setRemarks("Balance check")
+        ->setQueueTimeOutUrl("https://your-domain.com/timeout")
+        ->setResultUrl("https://your-domain.com/result");
+
+    $result = $mpesa->checkAccountBalance();
+
+    if ($result->isSuccessful()) {
+        echo "Account balance: " . $result->getBalance();
+    }
+} catch (MpesaException $e) {
+    echo "Error: " . $e->getMessage();
+}
+```
+
+## Best Practices
+
+1. **Error Handling**
+
+   - Always use try-catch blocks
+   - Handle both M-Pesa specific and general exceptions
+   - Log errors appropriately
+
+2. **Security**
+
+   - Use environment variables for sensitive data
+   - Enable SSL verification in production
+   - Validate all input data
+
+3. **Logging**
+
+   - Configure logging for debugging
+   - Log all API requests and responses
+   - Monitor for errors and issues
+
+4. **Callbacks**
+   - Implement proper callback handling
+   - Validate callback data
+   - Store transaction details securely
+
+For more detailed information about specific features, check out the [API Reference](/api-reference) section.

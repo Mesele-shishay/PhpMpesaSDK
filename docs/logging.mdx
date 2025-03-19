@@ -1,0 +1,263 @@
+# Logging
+
+## Overview
+
+The M-Pesa SDK provides comprehensive logging capabilities to help you track and debug API interactions. This guide explains how to configure and use the logging system effectively.
+
+## Basic Logging Setup
+
+### Initial Configuration
+
+```php
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Logging\MpesaLogger;
+
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox');
+
+// Configure logger
+$logger = new MpesaLogger();
+$logger->setLogPath('/path/to/logs')
+    ->setLogLevel('debug');
+
+$config->setLogger($logger);
+
+$mpesa = new Mpesa($config);
+```
+
+## Logging Options
+
+### 1. Log Levels
+
+```php
+// Set log level
+$logger->setLogLevel('debug');  // Options: debug, info, warning, error, critical
+```
+
+### 2. Log Format
+
+```php
+// Set log format
+$logger->setLogFormat('json');  // Options: json, text, custom
+```
+
+### 3. Log Path
+
+```php
+// Set log file path
+$logger->setLogPath('/path/to/logs/mpesa.log');
+```
+
+### 4. Log Rotation
+
+```php
+// Configure log rotation
+$logger->setMaxFileSize(10485760)  // 10MB
+    ->setMaxFiles(5)
+    ->setRotationInterval('daily');
+```
+
+## Logging Examples
+
+### 1. API Request Logging
+
+```php
+try {
+    $mpesa->authenticate();
+    // Logs will be automatically generated for:
+    // - Request details
+    // - Headers
+    // - Payload
+    // - Timestamp
+} catch (Exception $e) {
+    // Error will be logged automatically
+}
+```
+
+### 2. Custom Logging
+
+```php
+// Add custom log entry
+$logger->log('info', 'Custom message', [
+    'context' => 'payment',
+    'transaction_id' => '123456'
+]);
+```
+
+### 3. Structured Logging
+
+```php
+$logger->log('info', 'Transaction completed', [
+    'transaction' => [
+        'id' => '123456',
+        'amount' => 100,
+        'status' => 'success'
+    ],
+    'customer' => [
+        'phone' => '251700404709',
+        'name' => 'John Doe'
+    ]
+]);
+```
+
+## Log File Examples
+
+### JSON Format
+
+```json
+{
+  "timestamp": "2024-03-18T10:30:00Z",
+  "level": "info",
+  "message": "API Request",
+  "context": {
+    "method": "POST",
+    "endpoint": "/oauth/v1/generate",
+    "headers": {
+      "Authorization": "Bearer ..."
+    },
+    "payload": {
+      "grant_type": "client_credentials"
+    }
+  }
+}
+```
+
+### Text Format
+
+```
+[2024-03-18 10:30:00] INFO: API Request
+Method: POST
+Endpoint: /oauth/v1/generate
+Headers: {"Authorization": "Bearer ..."}
+Payload: {"grant_type": "client_credentials"}
+```
+
+## Production Logging
+
+### 1. Log Aggregation
+
+```php
+// Configure log aggregation
+$logger->setLogHandler(new ElasticsearchHandler([
+    'host' => 'elasticsearch.example.com',
+    'port' => 9200,
+    'index' => 'mpesa-logs'
+]));
+```
+
+### 2. Log Filtering
+
+```php
+// Filter sensitive data
+$logger->setLogFilter(function($data) {
+    // Remove sensitive information
+    unset($data['headers']['Authorization']);
+    unset($data['payload']['password']);
+    return $data;
+});
+```
+
+### 3. Log Monitoring
+
+```php
+// Set up log monitoring
+$logger->setAlertHandler(function($level, $message, $context) {
+    if ($level === 'error') {
+        // Send alert to monitoring service
+        sendAlert($message, $context);
+    }
+});
+```
+
+## Debugging
+
+### 1. Enable Debug Mode
+
+```php
+$logger->setLogLevel('debug')
+    ->setDebugMode(true);
+```
+
+### 2. Request/Response Logging
+
+```php
+// Log full request/response cycle
+$logger->setLogFullCycle(true);
+```
+
+### 3. Performance Logging
+
+```php
+// Log performance metrics
+$logger->setLogPerformance(true);
+```
+
+## Best Practices
+
+### 1. Log Security
+
+- Never log sensitive data
+- Use log filtering
+- Implement proper access controls
+- Use secure log storage
+
+### 2. Log Management
+
+- Implement log rotation
+- Set appropriate retention periods
+- Monitor log size
+- Regular log analysis
+
+### 3. Log Analysis
+
+- Use structured logging
+- Include relevant context
+- Add correlation IDs
+- Implement proper error tracking
+
+## Testing
+
+### 1. Mock Logger
+
+```php
+class MockLogger implements LoggerInterface {
+    private $logs = [];
+
+    public function log($level, $message, array $context = []) {
+        $this->logs[] = [
+            'level' => $level,
+            'message' => $message,
+            'context' => $context
+        ];
+    }
+
+    public function getLogs() {
+        return $this->logs;
+    }
+}
+
+$mockLogger = new MockLogger();
+$config->setLogger($mockLogger);
+```
+
+### 2. Test Logging
+
+```php
+public function testLogging() {
+    $mpesa->authenticate();
+
+    $logs = $mockLogger->getLogs();
+    $this->assertNotEmpty($logs);
+    $this->assertEquals('info', $logs[0]['level']);
+}
+```
+
+## Related Topics
+
+- [Configuration](/configuration)
+- [Error Handling](/error-handling)
+- [Testing](/testing)

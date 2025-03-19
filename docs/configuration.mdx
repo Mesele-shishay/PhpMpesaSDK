@@ -1,0 +1,238 @@
+# Configuration
+
+## Overview
+
+The M-Pesa SDK provides a flexible configuration system that allows you to customize various aspects of the integration. This guide explains how to configure the SDK effectively.
+
+## Basic Configuration
+
+### Initial Setup
+
+```php
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox');
+
+$mpesa = new Mpesa($config);
+```
+
+## Configuration Options
+
+### 1. Environment Settings
+
+```php
+// Set environment (sandbox or production)
+$config->setEnvironment('sandbox');
+
+// Set base URL
+$config->setBaseUrl("https://apisandbox.safaricom.et");
+
+// Set SSL verification
+$config->setVerifySSL(true);  // Always true in production
+```
+
+### 2. API Credentials
+
+```php
+// Set API credentials
+$config->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret");
+
+// Set shortcode
+$config->setShortCode("123456");
+
+// Set passkey
+$config->setPasskey("your_passkey");
+```
+
+### 3. Callback URLs
+
+```php
+// Set callback URLs
+$config->setCallbackUrl("https://your-domain.com/callback")
+    ->setResultUrl("https://your-domain.com/result")
+    ->setQueueTimeOutUrl("https://your-domain.com/timeout");
+```
+
+### 4. Logging Configuration
+
+```php
+// Configure logging
+$logger = new MpesaLogger();
+$logger->setLogPath('/path/to/logs')
+    ->setLogLevel('debug');
+
+$config->setLogger($logger);
+```
+
+### 5. HTTP Client Configuration
+
+```php
+// Set timeout
+$config->setTimeout(30);
+
+// Set retry attempts
+$config->setRetryAttempts(3);
+
+// Set custom headers
+$config->setHeaders([
+    'X-Request-ID' => uniqid(),
+    'X-Client-Version' => '1.0.0'
+]);
+```
+
+## Environment Variables
+
+### Using Environment Variables
+
+```php
+$config->setBaseUrl(getenv('MPESA_BASE_URL'))
+    ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
+    ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
+    ->setEnvironment(getenv('MPESA_ENVIRONMENT'));
+```
+
+### Environment File Example
+
+```env
+MPESA_BASE_URL=https://apisandbox.safaricom.et
+MPESA_CONSUMER_KEY=your_consumer_key
+MPESA_CONSUMER_SECRET=your_consumer_secret
+MPESA_ENVIRONMENT=sandbox
+MPESA_SHORTCODE=123456
+MPESA_PASSKEY=your_passkey
+MPESA_CALLBACK_URL=https://your-domain.com/callback
+MPESA_RESULT_URL=https://your-domain.com/result
+MPESA_TIMEOUT_URL=https://your-domain.com/timeout
+```
+
+## Advanced Configuration
+
+### 1. Custom Token Storage
+
+```php
+class CustomTokenStorage implements TokenStorageInterface {
+    public function saveToken($token, $expiresIn) {
+        // Store token securely
+    }
+
+    public function getToken() {
+        // Retrieve stored token
+    }
+
+    public function hasToken() {
+        // Check if token exists
+    }
+}
+
+$config->setTokenStorage(new CustomTokenStorage());
+```
+
+### 2. Custom HTTP Client
+
+```php
+class CustomHttpClient implements HttpClientInterface {
+    public function request($method, $url, $options = []) {
+        // Implement custom HTTP client
+    }
+}
+
+$config->setHttpClient(new CustomHttpClient());
+```
+
+### 3. Custom Authentication
+
+```php
+class CustomAuthentication implements AuthenticationInterface {
+    public function authenticate() {
+        // Implement custom authentication
+    }
+}
+
+$config->setAuthentication(new CustomAuthentication());
+```
+
+## Configuration Validation
+
+### Validating Configuration
+
+```php
+try {
+    $config->validate();
+} catch (ValidationException $e) {
+    // Handle validation errors
+    echo "Configuration Error: " . $e->getMessage();
+}
+```
+
+### Required Fields
+
+- Base URL
+- Consumer Key
+- Consumer Secret
+- Environment
+- Shortcode (for some operations)
+- Passkey (for some operations)
+
+## Production Configuration
+
+### 1. Security Settings
+
+```php
+$config->setVerifySSL(true)
+    ->setHeaders([
+        'X-Request-ID' => uniqid(),
+        'X-Client-Version' => '1.0.0',
+        'X-Security-Token' => generateSecurityToken()
+    ]);
+```
+
+### 2. Performance Settings
+
+```php
+$config->setTimeout(30)
+    ->setRetryAttempts(3)
+    ->setRetryDelay(1000);  // milliseconds
+```
+
+### 3. Monitoring Settings
+
+```php
+$logger = new MpesaLogger();
+$logger->setLogPath('/path/to/logs')
+    ->setLogLevel('info')
+    ->setLogFormat('json');
+
+$config->setLogger($logger);
+```
+
+## Testing Configuration
+
+### 1. Sandbox Environment
+
+```php
+$config->setEnvironment('sandbox')
+    ->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setVerifySSL(false);
+```
+
+### 2. Mock Configuration
+
+```php
+$mockConfig = new MockConfig();
+$mockConfig->setEnvironment('sandbox')
+    ->setBaseUrl("https://mock-api.example.com");
+
+$mpesa = new Mpesa($mockConfig);
+```
+
+## Related Topics
+
+- [Authentication](/authentication)
+- [Logging](/logging)
+- [Error Handling](/error-handling)

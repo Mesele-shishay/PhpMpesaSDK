@@ -1,0 +1,188 @@
+# Account Balance
+
+The Account Balance API allows you to check the balance of your M-Pesa business account. This is useful for monitoring your account balance and reconciling transactions.
+
+## Basic Usage
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Config;
+
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox')
+    ->setShortCode("your_shortcode")
+    ->setInitiatorName("your_initiator_name")
+    ->setInitiatorPassword("your_initiator_password");
+
+$mpesa = new Mpesa($config);
+
+// Check account balance
+$result = $mpesa->checkAccountBalance()
+    ->setCallbackUrl("https://your-domain.com/callback")
+    ->setQueueTimeOutUrl("https://your-domain.com/timeout")
+    ->setResultUrl("https://your-domain.com/result")
+    ->send();
+
+if ($result->isSuccessful()) {
+    echo "Account Balance: " . $result->getBalance();
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+```
+
+## Configuration
+
+Before using Account Balance API, ensure you have configured:
+
+1. **Shortcode**: Your M-Pesa shortcode
+2. **Initiator Name**: Your M-Pesa initiator name
+3. **Initiator Password**: Your M-Pesa initiator password
+4. **Callback URLs**: URLs to receive balance notifications
+5. **Environment**: Sandbox or Production
+
+## Methods
+
+### setCallbackUrl(string $url)
+
+Sets the callback URL for balance notifications.
+
+```php
+$mpesa->checkAccountBalance()->setCallbackUrl("https://your-domain.com/callback");
+```
+
+### setQueueTimeOutUrl(string $url)
+
+Sets the queue timeout URL.
+
+```php
+$mpesa->checkAccountBalance()->setQueueTimeOutUrl("https://your-domain.com/timeout");
+```
+
+### setResultUrl(string $url)
+
+Sets the result URL.
+
+```php
+$mpesa->checkAccountBalance()->setResultUrl("https://your-domain.com/result");
+```
+
+### send()
+
+Initiates the account balance check.
+
+```php
+$result = $mpesa->checkAccountBalance()->send();
+```
+
+## Response Handling
+
+The Account Balance response includes:
+
+- `ConversationID`: Unique identifier for the conversation
+- `OriginatorConversationID`: Original conversation ID
+- `ResponseCode`: Response code from M-Pesa
+- `ResponseDescription`: Description of the response
+- `Balance`: Current account balance
+
+```php
+if ($result->isSuccessful()) {
+    echo "Balance: " . $result->getBalance();
+    echo "Description: " . $result->getResponseDescription();
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+```
+
+## Best Practices
+
+1. **Error Handling**
+
+   - Implement comprehensive error handling
+   - Log all balance checks
+   - Monitor failed checks
+
+2. **Callback Processing**
+
+   - Process callbacks asynchronously
+   - Implement retry mechanisms
+   - Validate callback data
+
+3. **Security**
+
+   - Use HTTPS for all URLs
+   - Implement proper authentication
+   - Secure sensitive data
+
+4. **Testing**
+   - Test in sandbox environment first
+   - Verify callback handling
+   - Test with various scenarios
+
+## Example Implementation
+
+Here's a complete example of checking account balance:
+
+```php
+try {
+    $result = $mpesa->checkAccountBalance()
+        ->setCallbackUrl($callbackUrl)
+        ->setQueueTimeOutUrl($timeoutUrl)
+        ->setResultUrl($resultUrl)
+        ->send();
+
+    if ($result->isSuccessful()) {
+        $balance = $result->getBalance();
+        $description = $result->getResponseDescription();
+
+        // Log the balance check
+        logBalanceCheck($balance, $description);
+
+        // Update database with balance
+        updateAccountBalance($balance);
+
+        // Check if balance is below threshold
+        if ($balance < $minimumBalance) {
+            notifyLowBalance($balance);
+        }
+    } else {
+        // Handle error
+        logError($result->getErrorMessage());
+        notifyAdmin($result->getErrorMessage());
+    }
+} catch (Exception $e) {
+    // Handle exception
+    logException($e);
+    notifyAdmin($e->getMessage());
+}
+```
+
+## Callback Processing
+
+Create an endpoint to handle balance callbacks:
+
+```php
+// callback.php
+$callbackData = json_decode(file_get_contents('php://input'), true);
+
+// Process the callback
+processBalanceCallback($callbackData);
+
+// Send response
+header('Content-Type: application/json');
+echo json_encode([
+    'ResultCode' => 0,
+    'ResultDesc' => 'Success'
+]);
+```
+
+## Related Topics
+
+- [Callbacks](/callbacks)
+- [Error Handling](/error-handling)
+- [Transaction Status](/transaction-status)
+- [STK Push](/stk-push)
+- [B2C Operations](/b2c)
+- [C2B Operations](/c2b)

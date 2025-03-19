@@ -1,0 +1,129 @@
+# Installation
+
+## Requirements
+
+- PHP 7.4 or higher
+- Composer
+- M-Pesa API credentials (Consumer Key and Secret)
+- SSL certificate for production use
+
+## Installation Steps
+
+1. Install the package via Composer:
+
+```bash
+composer require mesasdk/php-mpesa
+```
+
+2. Configure your environment variables:
+
+```env
+MPESA_CONSUMER_KEY=your_consumer_key
+MPESA_CONSUMER_SECRET=your_consumer_secret
+MPESA_ENVIRONMENT=sandbox  # or production
+MPESA_BASE_URL=https://apisandbox.safaricom.et  # or production URL
+```
+
+3. Initialize the SDK in your application:
+
+```php
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+
+$config = new Config();
+$config->setBaseUrl($_ENV['MPESA_BASE_URL'])
+    ->setConsumerKey($_ENV['MPESA_CONSUMER_KEY'])
+    ->setConsumerSecret($_ENV['MPESA_CONSUMER_SECRET'])
+    ->setEnvironment($_ENV['MPESA_ENVIRONMENT'])
+    ->setVerifySSL(true);  // Always true in production
+
+
+$mpesa = new Mpesa($config);
+```
+
+## Development Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/your-username/php-mpesa.git
+cd php-mpesa
+```
+
+2. Install dependencies:
+
+```bash
+composer install
+```
+
+3. Run tests:
+
+```bash
+composer test
+```
+
+## Production Considerations
+
+1. **SSL Verification**: Always enable SSL verification in production:
+
+```php
+$config->setVerifySSL(true);
+```
+
+2. **Environment Variables**: Use environment variables for sensitive data:
+
+```php
+$config->setConsumerKey(getenv('MPESA_CONSUMER_KEY'));
+```
+
+3. **Error Handling**: Implement proper error handling:
+
+```php
+try {
+    $mpesa->authenticate();
+} catch (MpesaException $e) {
+    // Handle M-Pesa specific errors
+    error_log("M-Pesa Error: " . $e->getMessage());
+} catch (Exception $e) {
+    // Handle unexpected errors
+    error_log("Unexpected Error: " . $e->getMessage());
+}
+```
+
+4. **Logging**: Configure logging for debugging and monitoring:
+
+```php
+$logger = new MpesaLogger();
+$logger->setLogPath('/path/to/logs');
+$mpesa->setLogger($logger);
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **SSL Certificate Issues**
+
+   - Ensure your server has valid SSL certificates
+   - Check if the certificates are properly configured
+   - Verify the certificate chain is complete
+
+2. **Authentication Failures**
+
+   - Verify your API credentials
+   - Check if the credentials are properly set in environment variables
+   - Ensure the environment (sandbox/production) matches your credentials
+
+3. **Network Issues**
+   - Check your server's network connectivity
+   - Verify firewall settings
+   - Ensure proper DNS resolution
+
+### Getting Help
+
+If you encounter issues:
+
+1. Check the [FAQ](/faq) section
+2. Review the [error handling guide](/error-handling)
+3. Open an issue on GitHub
+4. Contact support

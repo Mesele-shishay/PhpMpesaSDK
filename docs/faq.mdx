@@ -1,60 +1,258 @@
-# Frequently Asked Questions (FAQ)
+# FAQ
 
 ## General Questions
 
-### What is the PHP M-Pesa SDK?
+### What is the M-Pesa SDK?
 
-The PHP M-Pesa SDK is a comprehensive library designed to facilitate the integration of M-Pesa payment services into PHP applications. It provides a modern, type-safe interface for interacting with the M-Pesa API, making it easier for developers to implement payment functionalities.
+The M-Pesa SDK is a PHP library that provides a simple and efficient way to integrate with the M-Pesa payment system. It handles all the complexities of API communication, authentication, and data formatting.
 
-### What are the prerequisites for using the SDK?
-
-To use the PHP M-Pesa SDK, you need:
+### What are the requirements for using the SDK?
 
 - PHP 7.4 or higher
-- Composer for dependency management
-- GuzzleHTTP 7.0 or higher
-- PHP extensions: curl, json
-- Valid M-Pesa API credentials (Consumer Key and Secret)
-- Internet connectivity
+- Composer
+- M-Pesa API credentials (Consumer Key and Secret)
+- SSL certificate for production use
 
-### How do I install the SDK?
+### How do I get started with the SDK?
 
-You can install the SDK using Composer:
+1. Install the SDK via Composer:
 
 ```bash
-composer require mesasdk/php-mpesa
+composer require mesa/php-mpesa
 ```
 
-## Usage Questions
-
-### How do I initialize the SDK?
-
-Here's an example of how to initialize the SDK:
+2. Configure your environment:
 
 ```php
-use MesaSDK\PhpMpesa\Mpesa;
-
-$mpesa = new Mpesa([
-    'consumer_key' => 'your_consumer_key',
-    'consumer_secret' => 'your_consumer_secret',
-    'environment' => 'sandbox', // or 'production'
-    'shortcode' => 'your_shortcode',
-    'key' => 'your_passkey'
-]);
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox');
 ```
 
-### How do I handle errors?
+3. Initialize the SDK:
 
-The SDK provides robust error handling through custom exceptions. You can catch `MpesaException` to handle specific errors:
+```php
+$mpesa = new Mpesa($config);
+```
+
+## Authentication
+
+### How do I get my API credentials?
+
+1. Register on the M-Pesa Developer Portal
+2. Create a new application
+3. Generate your Consumer Key and Secret
+4. Request access to the sandbox environment
+
+### How do I handle token expiration?
+
+The SDK automatically handles token expiration and refresh. You don't need to manage tokens manually.
+
+### What should I do if authentication fails?
+
+1. Verify your credentials
+2. Check your internet connection
+3. Ensure you're using the correct environment (sandbox/production)
+4. Check the error logs for detailed information
+
+## Transactions
+
+### What types of transactions are supported?
+
+- STK Push (Customer to Business)
+- B2C (Business to Customer)
+- C2B (Customer to Business)
+- Transaction Status Query
+- Account Balance Query
+
+### How do I handle failed transactions?
 
 ```php
 try {
-    $response = $mpesa->querySTKStatus('checkoutRequestId');
+    $result = $mpesa->stkPush();
+    if (!$result->isSuccessful()) {
+        // Handle failure
+        echo "Error: " . $result->getErrorMessage();
+    }
 } catch (MpesaException $e) {
+    // Handle exception
     echo "Error: " . $e->getMessage();
 }
 ```
 
+### How do I check transaction status?
+
+```php
+$result = $mpesa->checkTransactionStatus();
+if ($result->isSuccessful()) {
+    echo "Status: " . $result->getTransactionStatus();
+}
+```
+
+## Callbacks
+
+### How do I set up callbacks?
+
+1. Configure callback URLs in your application:
+
+```php
+$config->setCallbackUrl("https://your-domain.com/callback")
+    ->setResultUrl("https://your-domain.com/result")
+    ->setQueueTimeOutUrl("https://your-domain.com/timeout");
+```
+
+2. Create callback endpoints:
+
+```php
+// callback.php
+$callbackData = json_decode(file_get_contents('php://input'), true);
+$mpesa->processCallback($callbackData);
+```
+
+### How do I secure my callback endpoints?
+
+1. Use IP whitelisting
+2. Validate callback data
+3. Verify signatures
+4. Implement proper error handling
+
+### What should I do if callbacks are not received?
+
+1. Check your server logs
+2. Verify your callback URLs are accessible
+3. Ensure your server can receive POST requests
+4. Check your firewall settings
+
+## Error Handling
+
+### What types of errors should I handle?
+
+- Authentication errors
+- Network errors
+- Validation errors
+- Transaction errors
+- Callback errors
+
+### How do I implement proper error handling?
+
+```php
+try {
+    $mpesa->authenticate();
+} catch (AuthenticationException $e) {
+    // Handle authentication errors
+} catch (NetworkException $e) {
+    // Handle network errors
+} catch (ValidationException $e) {
+    // Handle validation errors
+} catch (MpesaException $e) {
+    // Handle M-Pesa specific errors
+} catch (Exception $e) {
+    // Handle unexpected errors
+}
+```
+
+## Logging
+
+### How do I configure logging?
+
+```php
+$logger = new MpesaLogger();
+$logger->setLogPath('/path/to/logs')
+    ->setLogLevel('debug');
+
+$config->setLogger($logger);
+```
+
+### What information should I log?
+
+- API requests and responses
+- Authentication attempts
+- Transaction details
+- Error messages
+- Callback data
+
+### How do I manage log files?
+
+1. Implement log rotation
+2. Set appropriate retention periods
+3. Monitor log size
+4. Regular log analysis
+
+## Testing
+
+### How do I test my integration?
+
+1. Use the sandbox environment
+2. Write unit tests
+3. Write integration tests
+4. Test error scenarios
+
+### How do I mock API responses?
+
+```php
+$mockClient = new MockHttpClient();
+$mockClient->setResponse(
+    'https://apisandbox.safaricom.et/oauth/v1/generate',
+    ['access_token' => 'test_token']
+);
+
+$config->setHttpClient($mockClient);
+```
+
+## Production
+
+### What should I do before going live?
+
+1. Test thoroughly in sandbox
+2. Enable SSL verification
+3. Use environment variables
+4. Implement proper error handling
+5. Set up monitoring
+6. Configure logging
+
+### How do I monitor my integration?
+
+1. Set up log aggregation
+2. Implement error alerts
+3. Monitor transaction success rates
+4. Track API response times
+
+### What security measures should I implement?
+
+1. Use HTTPS
+2. Validate all input
+3. Implement proper authentication
+4. Secure sensitive data
+5. Regular security audits
+
 ## Support
 
-If you have more questions or need further assistance, please check our [GitHub Issues](https://github.com/Mesele-shishay/PhpMpesaSDK/issues) or open a new issue.
+### Where can I get help?
+
+1. Check the documentation
+2. Review the examples
+3. Open an issue on GitHub
+4. Contact support
+
+### How do I report bugs?
+
+1. Check if it's a known issue
+2. Provide detailed information
+3. Include error logs
+4. Describe steps to reproduce
+
+### How do I contribute to the SDK?
+
+1. Fork the repository
+2. Create a feature branch
+3. Write tests
+4. Submit a pull request
+
+## Related Topics
+
+- [Installation](/installation)
+- [Basic Usage](/basic-usage)
+- [Error Handling](/error-handling)
+- [Testing](/testing)

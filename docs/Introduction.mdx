@@ -1,10 +1,45 @@
-# Introduction
-
-Welcome to the PHP M-Pesa SDK Documentation! This comprehensive SDK provides a modern, type-safe interface for integrating M-Pesa payment services into your PHP applications in Ethiopia.
+# Introduction to the M-Pesa SDK
 
 ## Overview
+The M-Pesa SDK is a PHP library designed to facilitate integration with the M-Pesa payment system. It provides a robust set of methods and utilities for handling transactions, managing responses, and handling exceptions.
 
-The PHP M-Pesa SDK offers a robust and developer-friendly way to interact with M-Pesa's payment gateway. Built with modern PHP practices and designed with a fluent interface, it simplifies the integration of M-Pesa services while ensuring type safety and proper error handling.
+## Installation
+To install the M-Pesa SDK, you can use Composer:
+
+```bash
+composer require mesa-sdk/php-mpesa
+```
+
+## Basic Usage
+Here's a simple example of how to use the M-Pesa SDK:
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+
+$mpesa = new Mpesa([
+    'consumerKey' => 'your_consumer_key',
+    'consumerSecret' => 'your_consumer_secret',
+    'shortCode' => 'your_short_code',
+    'environment' => 'sandbox'
+]);
+
+$mpesa->setPhoneNumber('254712345678')
+     ->setAmount(1000)
+     ->setCallbackUrl('https://your-callback-url.com')
+     ->setTransactionDesc('Payment for services')
+     ->setAccountReference('123456')
+     ->authenticate()
+     ->ussdPush();
+
+if ($mpesa->isSuccessful()) {
+    echo "Transaction successful!";
+} else {
+    echo "Transaction failed: " . $mpesa->getErrorMessage();
+}
+```
+
+## Next Steps
+Explore the core classes, exceptions, and examples to get a deeper understanding of the SDK's capabilities.
 
 ## Key Features
 
@@ -18,49 +53,6 @@ The PHP M-Pesa SDK offers a robust and developer-friendly way to interact with M
 - **Fluent Interface**: Modern, chainable methods for better code readability
 - **Comprehensive Error Handling**: Robust error handling with custom exceptions
 - **Extensive Testing**: Well-tested codebase ensuring stability
-
-## Getting Started
-
-### Installation
-
-Install the SDK using Composer:
-
-```bash
-composer require mesasdk/php-mpesa
-```
-
-### Basic Usage
-
-Here's a quick example of how to use the SDK for an STK Push request:
-
-```php
-use MesaSDK\PhpMpesa\Mpesa;
-
-// Initialize the SDK
-$mpesa = new Mpesa([
-    'consumer_key' => 'your_consumer_key',
-    'consumer_secret' => 'your_consumer_secret',
-    'environment' => 'sandbox', // or 'production'
-    'shortcode' => 'your_shortcode',
-    'key' => 'your_passkey'
-]);
-
-// Initiate STK Push
-try {
-    $response = $mpesa->stkPush(
-        100, // Amount
-        '251712345678', // Phone number
-        'REF123', // Reference
-        'Payment for goods' // Description
-    );
-
-    // Handle the response
-    print_r($response);
-} catch (MpesaException $e) {
-    // Handle any errors
-    echo $e->getMessage();
-}
-```
 
 ## Prerequisites
 
@@ -98,13 +90,6 @@ Process Customer-to-Business payments with:
 - Query transaction status
 - Check account balance
 - Handle timeouts and callbacks
-
-## Next Steps
-
-- Explore the [Quick Start Guide](./quick-start.mdx) for detailed setup instructions
-- Check out [Code Examples](./examples.mdx) for common use cases
-- Review the [API Reference](./api-reference.mdx) for detailed method documentation
-- Learn about [Error Handling](./error-handling.mdx)
 
 ## Support
 

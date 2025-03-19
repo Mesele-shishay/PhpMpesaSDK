@@ -1,0 +1,213 @@
+# STK Push
+
+STK Push is a Customer to Business (C2B) payment method that allows you to initiate a payment request to your customer's phone. The customer receives a prompt on their phone to enter their M-Pesa PIN to complete the transaction.
+
+## Basic Usage
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Config;
+
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox')
+    ->setShortCode("your_shortcode")
+    ->setPassKey("your_passkey");
+
+$mpesa = new Mpesa($config);
+
+// Initiate STK Push
+$result = $mpesa->stkPush()
+    ->setPhoneNumber("254712345678")
+    ->setAmount(1)
+    ->setCallbackUrl("https://your-domain.com/callback")
+    ->setAccountReference("Test")
+    ->setTransactionDesc("Test Payment")
+    ->send();
+
+if ($result->isSuccessful()) {
+    echo "Checkout Request ID: " . $result->getCheckoutRequestID();
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+```
+
+## Configuration
+
+Before using STK Push, ensure you have configured:
+
+1. **Shortcode**: Your M-Pesa shortcode
+2. **Passkey**: Your M-Pesa passkey
+3. **Callback URLs**: URLs to receive transaction notifications
+4. **Environment**: Sandbox or Production
+
+## Methods
+
+### setPhoneNumber(string $phone)
+
+Sets the customer's phone number.
+
+```php
+$mpesa->stkPush()->setPhoneNumber("254712345678");
+```
+
+### setAmount(float $amount)
+
+Sets the transaction amount.
+
+```php
+$mpesa->stkPush()->setAmount(100.00);
+```
+
+### setCallbackUrl(string $url)
+
+Sets the callback URL for transaction notifications.
+
+```php
+$mpesa->stkPush()->setCallbackUrl("https://your-domain.com/callback");
+```
+
+### setAccountReference(string $reference)
+
+Sets the account reference for the transaction.
+
+```php
+$mpesa->stkPush()->setAccountReference("Order #123");
+```
+
+### setTransactionDesc(string $desc)
+
+Sets the transaction description.
+
+```php
+$mpesa->stkPush()->setTransactionDesc("Payment for Order #123");
+```
+
+### send()
+
+Initiates the STK Push request.
+
+```php
+$result = $mpesa->stkPush()->send();
+```
+
+## Response Handling
+
+The STK Push response includes:
+
+- `CheckoutRequestID`: Unique identifier for the checkout request
+- `MerchantRequestID`: Unique identifier for the merchant request
+- `ResponseCode`: Response code from M-Pesa
+- `ResponseDescription`: Description of the response
+- `CustomerMessage`: Message to display to the customer
+
+```php
+if ($result->isSuccessful()) {
+    echo "Checkout Request ID: " . $result->getCheckoutRequestID();
+    echo "Merchant Request ID: " . $result->getMerchantRequestID();
+    echo "Customer Message: " . $result->getCustomerMessage();
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+```
+
+## Checking Transaction Status
+
+After initiating an STK Push, you can check the transaction status:
+
+```php
+$status = $mpesa->checkTransactionStatus($result->getCheckoutRequestID());
+if ($status->isSuccessful()) {
+    echo "Transaction Status: " . $status->getTransactionStatus();
+}
+```
+
+## Best Practices
+
+1. **Error Handling**
+
+   - Always check for successful responses
+   - Implement proper error handling
+   - Log failed transactions
+
+2. **Callback Processing**
+
+   - Process callbacks asynchronously
+   - Implement retry mechanisms
+   - Validate callback data
+
+3. **Security**
+
+   - Use HTTPS for callback URLs
+   - Validate phone numbers
+   - Implement proper authentication
+
+4. **Testing**
+   - Test in sandbox environment first
+   - Use test phone numbers
+   - Verify callback handling
+
+## Example Implementation
+
+Here's a complete example of initiating an STK Push:
+
+```php
+try {
+    $result = $mpesa->stkPush()
+        ->setPhoneNumber($phoneNumber)
+        ->setAmount($amount)
+        ->setCallbackUrl($callbackUrl)
+        ->setAccountReference($reference)
+        ->setTransactionDesc($description)
+        ->send();
+
+    if ($result->isSuccessful()) {
+        $checkoutRequestId = $result->getCheckoutRequestID();
+        $merchantRequestId = $result->getMerchantRequestID();
+
+        // Log the STK Push request
+        logStkPushRequest($checkoutRequestId, $merchantRequestId, $amount);
+
+        // Store request details in database
+        storeStkPushRequest($checkoutRequestId, $merchantRequestId, $amount);
+
+        // Schedule status check
+        scheduleStatusCheck($checkoutRequestId);
+    } else {
+        // Handle error
+        logError($result->getErrorMessage());
+        notifyAdmin($result->getErrorMessage());
+    }
+} catch (Exception $e) {
+    // Handle exception
+    logException($e);
+    notifyAdmin($e->getMessage());
+}
+```
+
+## Callback Processing
+
+Create an endpoint to handle STK Push callbacks:
+
+```php
+// callback.php
+$callbackData = json_decode(file_get_contents('php://input'), true);
+
+// Process the callback
+processStkPushCallback($callbackData);
+
+// Send response
+header('Content-Type: application/json');
+echo json_encode([
+    'ResultCode' => 0,
+    'ResultDesc' => 'Success'
+]);
+```
+
+## Related Topics
+
+- [Callbacks](/callbacks)
+- [Error Handling](/error-handling)
+- [Transaction Status](/transaction-status)

@@ -1,0 +1,421 @@
+# Testing
+
+## Overview
+
+The M-Pesa SDK provides comprehensive testing capabilities to help you ensure your integration works correctly. This guide explains how to write and run tests for your M-Pesa integration.
+
+## Basic Testing Setup
+
+### 1. Install Testing Dependencies
+
+```bash
+composer require --dev phpunit/phpunit
+```
+
+### 2. Create Test Configuration
+
+```php
+// phpunit.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="vendor/autoload.php"
+         colors="true"
+         verbose="true"
+         stopOnFailure="false">
+    <testsuites>
+        <testsuite name="M-Pesa SDK Tests">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="MPESA_ENVIRONMENT" value="sandbox"/>
+        <env name="MPESA_CONSUMER_KEY" value="test_key"/>
+        <env name="MPESA_CONSUMER_SECRET" value="test_secret"/>
+    </php>
+</phpunit>
+```
+
+## Unit Testing
+
+### 1. Configuration Tests
+
+```php
+// tests/ConfigTest.php
+<?php
+
+use PHPUnit\Framework\TestCase;
+use MesaSDK\PhpMpesa\Config;
+
+class ConfigTest extends TestCase
+{
+    public function testConfigInitialization()
+    {
+        $config = new Config();
+        $config->setBaseUrl("https://apisandbox.safaricom.et")
+            ->setConsumerKey("test_key")
+            ->setConsumerSecret("test_secret")
+            ->setEnvironment('sandbox');
+
+        $this->assertEquals("https://apisandbox.safaricom.et", $config->getBaseUrl());
+        $this->assertEquals("test_key", $config->getConsumerKey());
+        $this->assertEquals("test_secret", $config->getConsumerSecret());
+        $this->assertEquals("sandbox", $config->getEnvironment());
+    }
+
+    public function testConfigValidation()
+    {
+        $this->expectException(ValidationException::class);
+
+        $config = new Config();
+        $config->validate(); // Should throw exception for missing required fields
+    }
+}
+```
+
+### 2. Response Tests
+
+```php
+// tests/ResponseTest.php
+<?php
+
+use PHPUnit\Framework\TestCase;
+use MesaSDK\PhpMpesa\Response\MpesaResponse;
+
+class ResponseTest extends TestCase
+{
+    public function testSuccessfulResponse()
+    {
+        $data = [
+            'ResponseCode' => 0,
+            'ResponseDesc' => 'Success',
+            'MerchantRequestID' => '12345-67890-1'
+        ];
+
+        $response = MpesaResponse::fromArray($data);
+
+        $this->assertTrue($response->isSuccessful());
+        $this->assertEquals('Success', $response->getResponseDesc());
+        $this->assertEquals('12345-67890-1', $response->getMerchantRequestID());
+    }
+
+    public function testFailedResponse()
+    {
+        $data = [
+            'ResponseCode' => 1,
+            'ResponseDesc' => 'Failed',
+            'ErrorMessage' => 'Invalid credentials'
+        ];
+
+        $response = MpesaResponse::fromArray($data);
+
+        $this->assertFalse($response->isSuccessful());
+        $this->assertEquals('Failed', $response->getResponseDesc());
+        $this->assertEquals('Invalid credentials', $response->getErrorMessage());
+    }
+}
+```
+
+## Integration Testing
+
+### 1. Authentication Tests
+
+```php
+// tests/AuthenticationTest.php
+<?php
+
+use PHPUnit\Framework\TestCase;
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+
+class AuthenticationTest extends TestCase
+{
+    private $mpesa;
+
+    protected function setUp(): void
+    {
+        $config = new Config();
+        $config->setBaseUrl("https://apisandbox.safaricom.et")
+            ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
+            ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
+            ->setEnvironment('sandbox');
+
+        $this->mpesa = new Mpesa($config);
+    }
+
+    public function testSuccessfulAuthentication()
+    {
+        $this->mpesa->authenticate();
+        $this->assertNotNull($this->mpesa->getAuth()->getAccessToken());
+    }
+
+    public function testFailedAuthentication()
+    {
+        $this->expectException(AuthenticationException::class);
+
+        $config = new Config();
+        $config->setConsumerKey('invalid_key')
+            ->setConsumerSecret('invalid_secret');
+
+        $mpesa = new Mpesa($config);
+        $mpesa->authenticate();
+    }
+}
+```
+
+### 2. Transaction Tests
+
+```php
+// tests/TransactionTest.php
+<?php
+
+use PHPUnit\Framework\TestCase;
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+
+class TransactionTest extends TestCase
+{
+    private $mpesa;
+
+    protected function setUp(): void
+    {
+        $config = new Config();
+        $config->setBaseUrl("https://apisandbox.safaricom.et")
+            ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
+            ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
+            ->setEnvironment('sandbox');
+
+        $this->mpesa = new Mpesa($config);
+    }
+
+    public function testSTKPush()
+    {
+        $this->mpesa->authenticate();
+
+        $result = $this->mpesa
+            ->setPhoneNumber("251700404709")
+            ->setAmount(10)
+            ->setCallbackUrl("https://test.example.com/callback")
+            ->setTransactionDesc("Test payment")
+            ->setAccountReference("TEST123")
+            ->stkPush();
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertNotNull($result->getMerchantRequestID());
+    }
+
+    public function testB2C()
+    {
+        $this->mpesa->authenticate();
+
+        $result = $this->mpesa
+            ->setInitiatorName("apitest")
+            ->setSecurityCredential("test_credential")
+            ->setCommandId("BusinessPayment")
+            ->setAmount(100)
+            ->setPartyA("1020")
+            ->setPartyB("251700404709")
+            ->setRemarks("Test payment")
+            ->setQueueTimeOutUrl("https://test.example.com/timeout")
+            ->setResultUrl("https://test.example.com/result")
+            ->b2c();
+
+        $this->assertTrue($result->isSuccessful());
+        $this->assertNotNull($result->getConversationId());
+    }
+}
+```
+
+## Mock Testing
+
+### 1. Mock HTTP Client
+
+```php
+// tests/MockHttpClient.php
+<?php
+
+class MockHttpClient implements HttpClientInterface
+{
+    private $responses = [];
+    private $requests = [];
+
+    public function setResponse($url, $response)
+    {
+        $this->responses[$url] = $response;
+    }
+
+    public function request($method, $url, $options = [])
+    {
+        $this->requests[] = [
+            'method' => $method,
+            'url' => $url,
+            'options' => $options
+        ];
+
+        return $this->responses[$url] ?? null;
+    }
+
+    public function getRequests()
+    {
+        return $this->requests;
+    }
+}
+
+// Usage in tests
+public function testWithMockClient()
+{
+    $mockClient = new MockHttpClient();
+    $mockClient->setResponse(
+        'https://apisandbox.safaricom.et/oauth/v1/generate',
+        ['access_token' => 'test_token']
+    );
+
+    $config = new Config();
+    $config->setHttpClient($mockClient);
+
+    $mpesa = new Mpesa($config);
+    $mpesa->authenticate();
+
+    $requests = $mockClient->getRequests();
+    $this->assertCount(1, $requests);
+    $this->assertEquals('POST', $requests[0]['method']);
+}
+```
+
+### 2. Mock Logger
+
+```php
+// tests/MockLogger.php
+<?php
+
+class MockLogger implements LoggerInterface
+{
+    private $logs = [];
+
+    public function log($level, $message, array $context = [])
+    {
+        $this->logs[] = [
+            'level' => $level,
+            'message' => $message,
+            'context' => $context
+        ];
+    }
+
+    public function getLogs()
+    {
+        return $this->logs;
+    }
+}
+
+// Usage in tests
+public function testLogging()
+{
+    $mockLogger = new MockLogger();
+    $config = new Config();
+    $config->setLogger($mockLogger);
+
+    $mpesa = new Mpesa($config);
+    $mpesa->authenticate();
+
+    $logs = $mockLogger->getLogs();
+    $this->assertNotEmpty($logs);
+    $this->assertEquals('info', $logs[0]['level']);
+}
+```
+
+## Test Data
+
+### 1. Test Fixtures
+
+```php
+// tests/fixtures/transaction_data.php
+<?php
+
+return [
+    'successful_stk_push' => [
+        'ResponseCode' => 0,
+        'ResponseDesc' => 'Success',
+        'MerchantRequestID' => '12345-67890-1',
+        'CheckoutRequestID' => 'ws_CO_123456789',
+        'CustomerMessage' => 'Success. Your balance is 1000.00'
+    ],
+    'failed_stk_push' => [
+        'ResponseCode' => 1,
+        'ResponseDesc' => 'Failed',
+        'ErrorMessage' => 'Invalid credentials'
+    ]
+];
+```
+
+### 2. Test Helpers
+
+```php
+// tests/helpers/TestHelper.php
+<?php
+
+class TestHelper
+{
+    public static function createTestConfig()
+    {
+        $config = new Config();
+        $config->setBaseUrl("https://apisandbox.safaricom.et")
+            ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
+            ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
+            ->setEnvironment('sandbox');
+
+        return $config;
+    }
+
+    public static function createTestMpesa()
+    {
+        return new Mpesa(self::createTestConfig());
+    }
+}
+```
+
+## Running Tests
+
+### 1. Run All Tests
+
+```bash
+./vendor/bin/phpunit
+```
+
+### 2. Run Specific Test File
+
+```bash
+./vendor/bin/phpunit tests/AuthenticationTest.php
+```
+
+### 3. Run Specific Test Method
+
+```bash
+./vendor/bin/phpunit --filter testSuccessfulAuthentication tests/AuthenticationTest.php
+```
+
+## Best Practices
+
+### 1. Test Organization
+
+- Group related tests
+- Use descriptive test names
+- Follow AAA pattern (Arrange, Act, Assert)
+- Keep tests independent
+
+### 2. Test Coverage
+
+- Test success scenarios
+- Test error scenarios
+- Test edge cases
+- Test validation
+
+### 3. Test Maintenance
+
+- Keep tests up to date
+- Remove obsolete tests
+- Document test requirements
+- Regular test reviews
+
+## Related Topics
+
+- [Error Handling](/error-handling)
+- [Logging](/logging)
+- [Configuration](/configuration)

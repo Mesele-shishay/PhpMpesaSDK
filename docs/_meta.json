@@ -1,10 +1,4 @@
 {
-  "index": "Introduction",
-  "core-classes": "Core Classes",
-  "exceptions": "Exceptions",
-  "contracts": "Contracts",
-  "base-classes": "Base Classes",
-  "examples": "Examples",
   "-- Getting Started": {
     "type": "separator",
     "title": "Getting Started"
@@ -12,13 +6,15 @@
   "introduction": "Overview",
   "installation": "Installation",
   "basic-usage": "Basic Usage",
+  "faq": "FAQ",
   "-- Core Concepts": {
     "type": "separator",
     "title": "Core Concepts"
   },
-  "authentication": "Authentication",
   "configuration": "Configuration",
+  "authentication": "Authentication",
   "logging": "Logging",
+  "error-handling": "Error Handling",
   "-- API Reference": {
     "type": "separator",
     "title": "API Reference"
@@ -28,18 +24,21 @@
   "c2b": "C2B Operations",
   "transaction-status": "Transaction Status",
   "account-balance": "Account Balance",
-  "-- Guides": {
+  "-- Advanced Topics": {
     "type": "separator",
-    "title": "Guides"
+    "title": "Advanced Topics"
   },
-  "error-handling": "Error Handling",
   "callbacks": "Callbacks",
   "testing": "Testing",
+  "core-classes": "Core Classes",
+  "exceptions": "Exceptions",
+  "contracts": "Contracts",
+  "base-classes": "Base Classes",
   "-- Resources": {
     "type": "separator",
     "title": "Resources"
   },
-  "faq": "FAQ",
+  "examples": "Examples",
   "contributing": "Contributing",
   "changelog": "Changelog"
 }

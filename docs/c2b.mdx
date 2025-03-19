@@ -1,0 +1,230 @@
+# C2B Operations
+
+C2B (Customer to Business) operations allow you to receive payments from customers directly to your M-Pesa business account. This is useful for scenarios like bill payments, product purchases, or any other customer-to-business transactions.
+
+## Basic Usage
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Config;
+
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox')
+    ->setShortCode("your_shortcode");
+
+$mpesa = new Mpesa($config);
+
+// Register C2B URLs
+$result = $mpesa->c2b()
+    ->setValidationUrl("https://your-domain.com/validate")
+    ->setConfirmationUrl("https://your-domain.com/confirm")
+    ->register();
+
+if ($result->isSuccessful()) {
+    echo "URLs registered successfully";
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+
+// Simulate C2B payment
+$simulation = $mpesa->c2b()
+    ->setPhoneNumber("254712345678")
+    ->setAmount(100.00)
+    ->setBillReference("Bill123")
+    ->setBillReferenceNumber("REF123")
+    ->simulate();
+
+if ($simulation->isSuccessful()) {
+    echo "Simulation successful";
+} else {
+    echo "Error: " . $simulation->getErrorMessage();
+}
+```
+
+## Configuration
+
+Before using C2B operations, ensure you have configured:
+
+1. **Shortcode**: Your M-Pesa shortcode
+2. **Validation URL**: URL to validate transactions
+3. **Confirmation URL**: URL to receive transaction confirmations
+4. **Environment**: Sandbox or Production
+
+## Methods
+
+### setValidationUrl(string $url)
+
+Sets the validation URL for transaction validation.
+
+```php
+$mpesa->c2b()->setValidationUrl("https://your-domain.com/validate");
+```
+
+### setConfirmationUrl(string $url)
+
+Sets the confirmation URL for transaction confirmations.
+
+```php
+$mpesa->c2b()->setConfirmationUrl("https://your-domain.com/confirm");
+```
+
+### register()
+
+Registers the C2B URLs with M-Pesa.
+
+```php
+$result = $mpesa->c2b()->register();
+```
+
+### setPhoneNumber(string $phone)
+
+Sets the customer's phone number for simulation.
+
+```php
+$mpesa->c2b()->setPhoneNumber("254712345678");
+```
+
+### setAmount(float $amount)
+
+Sets the transaction amount for simulation.
+
+```php
+$mpesa->c2b()->setAmount(100.00);
+```
+
+### setBillReference(string $reference)
+
+Sets the bill reference for simulation.
+
+```php
+$mpesa->c2b()->setBillReference("Bill123");
+```
+
+### setBillReferenceNumber(string $number)
+
+Sets the bill reference number for simulation.
+
+```php
+$mpesa->c2b()->setBillReferenceNumber("REF123");
+```
+
+### simulate()
+
+Simulates a C2B payment.
+
+```php
+$result = $mpesa->c2b()->simulate();
+```
+
+## Response Handling
+
+### Registration Response
+
+The registration response includes:
+
+- `ResponseCode`: Response code from M-Pesa
+- `ResponseDescription`: Description of the response
+- `OriginatorConversationID`: Original conversation ID
+- `ConversationID`: Unique identifier for the conversation
+
+```php
+if ($result->isSuccessful()) {
+    echo "Registration successful";
+    echo "Conversation ID: " . $result->getConversationID();
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+```
+
+### Simulation Response
+
+The simulation response includes:
+
+- `ResponseCode`: Response code from M-Pesa
+- `ResponseDescription`: Description of the response
+- `CustomerMessage`: Message to display to the customer
+- `MerchantRequestID`: Unique identifier for the merchant request
+
+```php
+if ($simulation->isSuccessful()) {
+    echo "Simulation successful";
+    echo "Customer Message: " . $simulation->getCustomerMessage();
+} else {
+    echo "Error: " . $simulation->getErrorMessage();
+}
+```
+
+## Validation Endpoint
+
+Create an endpoint to handle validation requests:
+
+```php
+// validate.php
+$validationData = json_decode(file_get_contents('php://input'), true);
+
+// Validate the transaction
+$valid = validateTransaction($validationData);
+
+// Send response
+header('Content-Type: application/json');
+echo json_encode([
+    'ResultCode' => $valid ? 0 : 1,
+    'ResultDesc' => $valid ? 'Success' : 'Failed'
+]);
+```
+
+## Confirmation Endpoint
+
+Create an endpoint to handle confirmation requests:
+
+```php
+// confirm.php
+$confirmationData = json_decode(file_get_contents('php://input'), true);
+
+// Process the confirmation
+processConfirmation($confirmationData);
+
+// Send response
+header('Content-Type: application/json');
+echo json_encode([
+    'ResultCode' => 0,
+    'ResultDesc' => 'Success'
+]);
+```
+
+## Best Practices
+
+1. **Error Handling**
+
+   - Implement comprehensive error handling
+   - Log all transactions
+   - Monitor failed transactions
+
+2. **Validation**
+
+   - Validate all incoming requests
+   - Implement proper security measures
+   - Check transaction amounts
+
+3. **Security**
+
+   - Use HTTPS for all URLs
+   - Validate phone numbers
+   - Implement proper authentication
+   - Secure sensitive data
+
+4. **Testing**
+   - Test in sandbox environment first
+   - Use test phone numbers
+   - Verify callback handling
+   - Test with various amounts
+
+## Related Topics
+
+- [Callbacks](/callbacks)
+- [Error Handling](/error-handling)
+- [Transaction Status](/transaction-status)
+- [Account Balance](/account-balance)

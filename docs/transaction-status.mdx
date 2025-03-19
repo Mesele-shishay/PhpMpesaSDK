@@ -1,0 +1,227 @@
+# Transaction Status
+
+The Transaction Status API allows you to check the status of any M-Pesa transaction using the transaction ID or checkout request ID. This is useful for tracking payments and reconciling transactions.
+
+## Basic Usage
+
+```php
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Config;
+
+$config = new Config();
+$config->setBaseUrl("https://apisandbox.safaricom.et")
+    ->setConsumerKey("your_consumer_key")
+    ->setConsumerSecret("your_consumer_secret")
+    ->setEnvironment('sandbox')
+    ->setShortCode("your_shortcode")
+    ->setInitiatorName("your_initiator_name")
+    ->setInitiatorPassword("your_initiator_password");
+
+$mpesa = new Mpesa($config);
+
+// Check transaction status
+$result = $mpesa->checkTransactionStatus()
+    ->setTransactionID("QK4R7GXG")  // or setCheckoutRequestID("ws_CO_123456789")
+    ->setCallbackUrl("https://your-domain.com/callback")
+    ->setQueueTimeOutUrl("https://your-domain.com/timeout")
+    ->setResultUrl("https://your-domain.com/result")
+    ->send();
+
+if ($result->isSuccessful()) {
+    echo "Transaction Status: " . $result->getTransactionStatus();
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+```
+
+## Configuration
+
+Before using Transaction Status API, ensure you have configured:
+
+1. **Shortcode**: Your M-Pesa shortcode
+2. **Initiator Name**: Your M-Pesa initiator name
+3. **Initiator Password**: Your M-Pesa initiator password
+4. **Callback URLs**: URLs to receive transaction notifications
+5. **Environment**: Sandbox or Production
+
+## Methods
+
+### setTransactionID(string $id)
+
+Sets the transaction ID to check.
+
+```php
+$mpesa->checkTransactionStatus()->setTransactionID("QK4R7GXG");
+```
+
+### setCheckoutRequestID(string $id)
+
+Sets the checkout request ID to check.
+
+```php
+$mpesa->checkTransactionStatus()->setCheckoutRequestID("ws_CO_123456789");
+```
+
+### setCallbackUrl(string $url)
+
+Sets the callback URL for transaction notifications.
+
+```php
+$mpesa->checkTransactionStatus()->setCallbackUrl("https://your-domain.com/callback");
+```
+
+### setQueueTimeOutUrl(string $url)
+
+Sets the queue timeout URL.
+
+```php
+$mpesa->checkTransactionStatus()->setQueueTimeOutUrl("https://your-domain.com/timeout");
+```
+
+### setResultUrl(string $url)
+
+Sets the result URL.
+
+```php
+$mpesa->checkTransactionStatus()->setResultUrl("https://your-domain.com/result");
+```
+
+### send()
+
+Initiates the transaction status check.
+
+```php
+$result = $mpesa->checkTransactionStatus()->send();
+```
+
+## Response Handling
+
+The Transaction Status response includes:
+
+- `TransactionID`: Unique identifier for the transaction
+- `ConversationID`: Unique identifier for the conversation
+- `OriginatorConversationID`: Original conversation ID
+- `ResponseCode`: Response code from M-Pesa
+- `ResponseDescription`: Description of the response
+- `TransactionStatus`: Current status of the transaction
+
+```php
+if ($result->isSuccessful()) {
+    echo "Transaction ID: " . $result->getTransactionID();
+    echo "Status: " . $result->getTransactionStatus();
+    echo "Description: " . $result->getResponseDescription();
+} else {
+    echo "Error: " . $result->getErrorMessage();
+}
+```
+
+## Transaction Statuses
+
+Common transaction statuses include:
+
+- `Success`: Transaction completed successfully
+- `Failed`: Transaction failed
+- `Pending`: Transaction is being processed
+- `Cancelled`: Transaction was cancelled
+- `Invalid`: Transaction is invalid
+
+## Best Practices
+
+1. **Error Handling**
+
+   - Implement comprehensive error handling
+   - Log all status checks
+   - Monitor failed checks
+
+2. **Callback Processing**
+
+   - Process callbacks asynchronously
+   - Implement retry mechanisms
+   - Validate callback data
+
+3. **Security**
+
+   - Use HTTPS for all URLs
+   - Implement proper authentication
+   - Secure sensitive data
+
+4. **Testing**
+   - Test in sandbox environment first
+   - Test with various transaction IDs
+   - Verify callback handling
+
+## Example Implementation
+
+Here's a complete example of checking transaction status:
+
+```php
+try {
+    $result = $mpesa->checkTransactionStatus()
+        ->setTransactionID($transactionId)
+        ->setCallbackUrl($callbackUrl)
+        ->setQueueTimeOutUrl($timeoutUrl)
+        ->setResultUrl($resultUrl)
+        ->send();
+
+    if ($result->isSuccessful()) {
+        $status = $result->getTransactionStatus();
+        $description = $result->getResponseDescription();
+
+        // Log the status check
+        logTransactionStatus($transactionId, $status, $description);
+
+        // Update database with status
+        updateTransactionStatus($transactionId, $status);
+
+        // Handle different statuses
+        switch ($status) {
+            case 'Success':
+                processSuccessfulTransaction($transactionId);
+                break;
+            case 'Failed':
+                processFailedTransaction($transactionId);
+                break;
+            case 'Pending':
+                scheduleStatusCheck($transactionId);
+                break;
+            default:
+                logUnknownStatus($transactionId, $status);
+        }
+    } else {
+        // Handle error
+        logError($transactionId, $result->getErrorMessage());
+        notifyAdmin($transactionId, $result->getErrorMessage());
+    }
+} catch (Exception $e) {
+    // Handle exception
+    logException($transactionId, $e);
+    notifyAdmin($transactionId, $e->getMessage());
+}
+```
+
+## Callback Processing
+
+Create an endpoint to handle transaction status callbacks:
+
+```php
+// callback.php
+$callbackData = json_decode(file_get_contents('php://input'), true);
+
+// Process the callback
+processTransactionStatusCallback($callbackData);
+
+// Send response
+header('Content-Type: application/json');
+echo json_encode([
+    'ResultCode' => 0,
+    'ResultDesc' => 'Success'
+]);
+```
+
+## Related Topics
+
+- [Callbacks](/callbacks)
+- [Error Handling](/error-handling)
+- [STK Push](/stk-push)
+- [B2C Operations](/b2c)
+- [C2B Operations](/c2b)
