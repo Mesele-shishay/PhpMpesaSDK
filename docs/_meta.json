@@ -1,9 +1,20 @@
 {
+  "theme": {
+    "code": {
+      "copy": true
+    }
+  },
   "-- Getting Started": {
     "type": "separator",
     "title": "Getting Started"
   },
-  "introduction": "Overview",
+  "introduction": {
+    "title": "Overview",
+    "theme": {
+      "hidden": true
+    },
+    "index": true
+  },
   "installation": "Installation",
   "basic-usage": "Basic Usage",
   "faq": "FAQ",
