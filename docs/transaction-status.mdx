@@ -5,32 +5,70 @@ The Transaction Status API allows you to check the status of any M-Pesa transact
 ## Basic Usage
 
 ```php
-use MesaSDK\PhpMpesa\Mpesa;
-use MesaSDK\PhpMpesa\Config;
+try {
+    // Initialize configuration
+    $config = new Config();
+    $config->setEnvironment($settings['environment'])
+        ->setBaseUrl($settings['base_url'])
+        ->setConsumerKey($settings['consumer_key'])
+        ->setConsumerSecret($settings['consumer_secret'])
+        ->setShortCode($settings['shortcode'])
+        ->setVerifySSL(false); // Note: Always use true in production
 
-$config = new Config();
-$config->setBaseUrl("https://apisandbox.safaricom.et")
-    ->setConsumerKey("your_consumer_key")
-    ->setConsumerSecret("your_consumer_secret")
-    ->setEnvironment('sandbox')
-    ->setShortCode("your_shortcode")
-    ->setInitiatorName("your_initiator_name")
-    ->setInitiatorPassword("your_initiator_password");
+    // Initialize M-Pesa client
+    $mpesa = new Mpesa($config);
 
-$mpesa = new Mpesa($config);
+    // Authenticate
+    $mpesa->authenticate();
 
-// Check transaction status
-$result = $mpesa->checkTransactionStatus()
-    ->setTransactionID("QK4R7GXG")  // or setCheckoutRequestID("ws_CO_123456789")
-    ->setCallbackUrl("https://your-domain.com/callback")
-    ->setQueueTimeOutUrl("https://your-domain.com/timeout")
-    ->setResultUrl("https://your-domain.com/result")
-    ->send();
+    // Query transaction status using fluent API
+    /** @var TransactionStatusResponse $response */
+    $response = $mpesa
+        ->setStatusInitiator('apitest')
+        ->setStatusSecurityCredential('lMhf0UqE4ydeEDwpUskmPgkNDZnA6NLi7z3T1TQuWCkH3/ScW8pRRnobq/AcwFvbC961+zDMgOEYGm8Oivb7L/7Y9ED3lhR7pJvnH8B1wYis5ifdeeWI6XE2NSq8X1Tc7QB9Dg8SlPEud3tgloB2DlT+JIv3ebIl/J/8ihGVrq499bt1pz/EA2nzkCtGeHRNbEDxkqkEnbioV0OM//0bv4K++XyV6jUFlIIgkDkmcK6aOU8mPBHs2um9aP+Y+nTJaa6uHDudRFg0+3G6gt1zRCPs8AYbts2IebseBGfZKv5K6Lqk9/W8657gEkrDZE8Mi78MVianqHdY/8d6D9KKhw==')
+        ->setTransactionId('0')
+        ->setResultUrl($settings['result_url'])
+        ->setQueueTimeOutUrl($settings['timeout_url'])
+        ->setRemarks('Transaction Status Query')
+        ->setStatusOccasion('Query trans status')
+        ->queryTransactionStatus();
 
-if ($result->isSuccessful()) {
-    echo "Transaction Status: " . $result->getTransactionStatus();
-} else {
-    echo "Error: " . $result->getErrorMessage();
+    // Check if request was successful
+    if ($response->isSuccessful()) {
+        echo "Transaction status query initiated successfully\n";
+
+        // Access specific transaction details using the model methods
+        echo "Transaction Status: " . $response->getTransactionStatus() . "\n";
+        echo "Amount: " . $response->getAmount() . "\n";
+        echo "Transaction Date: " . $response->getTransactionDate() . "\n";
+        echo "Phone Number: " . $response->getPhoneNumber() . "\n";
+        echo "Receipt Number: " . $response->getReceiptNumber() . "\n";
+        echo "Debit Party: " . $response->getDebitPartyName() . "\n";
+        echo "Credit Party: " . $response->getCreditPartyName() . "\n";
+
+        // Check if transaction is completed
+        if ($response->isCompleted()) {
+            echo "Transaction is completed\n";
+        } else {
+            echo "Transaction is not completed\n";
+        }
+
+        // Get any additional parameter
+        $customParam = $response->getResultParameter('CustomKey', 'default value');
+        echo "Custom Parameter: " . $customParam . "\n";
+
+        // Get all data as array or JSON
+        echo "All Data (JSON): " . $response->toJson() . "\n";
+    } else {
+        echo "Transaction status query failed\n";
+        echo "Error Code: " . $response->getResultCode() . "\n";
+        echo "Error Description: " . $response->getResultDesc() . "\n";
+    }
+
+} catch (MpesaException $e) {
+    echo "M-Pesa Error: " . $e->getMessage() . "\n";
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
 }
 ```
 
@@ -51,7 +89,7 @@ Before using Transaction Status API, ensure you have configured:
 Sets the transaction ID to check.
 
 ```php
-$mpesa->checkTransactionStatus()->setTransactionID("QK4R7GXG");
+$mpesa->setTransactionID("QK4R7GXG");
 ```
 
 ### setCheckoutRequestID(string $id)
@@ -59,7 +97,7 @@ $mpesa->checkTransactionStatus()->setTransactionID("QK4R7GXG");
 Sets the checkout request ID to check.
 
 ```php
-$mpesa->checkTransactionStatus()->setCheckoutRequestID("ws_CO_123456789");
+$mpesa->setCheckoutRequestID("ws_CO_123456789");
 ```
 
 ### setCallbackUrl(string $url)
@@ -67,7 +105,7 @@ $mpesa->checkTransactionStatus()->setCheckoutRequestID("ws_CO_123456789");
 Sets the callback URL for transaction notifications.
 
 ```php
-$mpesa->checkTransactionStatus()->setCallbackUrl("https://your-domain.com/callback");
+$mpesa->setCallbackUrl("https://your-domain.com/callback");
 ```
 
 ### setQueueTimeOutUrl(string $url)
@@ -75,7 +113,7 @@ $mpesa->checkTransactionStatus()->setCallbackUrl("https://your-domain.com/callba
 Sets the queue timeout URL.
 
 ```php
-$mpesa->checkTransactionStatus()->setQueueTimeOutUrl("https://your-domain.com/timeout");
+$mpesa->setQueueTimeOutUrl("https://your-domain.com/timeout");
 ```
 
 ### setResultUrl(string $url)
@@ -83,7 +121,7 @@ $mpesa->checkTransactionStatus()->setQueueTimeOutUrl("https://your-domain.com/ti
 Sets the result URL.
 
 ```php
-$mpesa->checkTransactionStatus()->setResultUrl("https://your-domain.com/result");
+$mpesa->setResultUrl("https://your-domain.com/result");
 ```
 
 ### send()
@@ -91,7 +129,7 @@ $mpesa->checkTransactionStatus()->setResultUrl("https://your-domain.com/result")
 Initiates the transaction status check.
 
 ```php
-$result = $mpesa->checkTransactionStatus()->send();
+$result = $mpesa->send();
 ```
 
 ## Response Handling
@@ -156,7 +194,7 @@ Here's a complete example of checking transaction status:
 
 ```php
 try {
-    $result = $mpesa->checkTransactionStatus()
+    $result = $mpesa
         ->setTransactionID($transactionId)
         ->setCallbackUrl($callbackUrl)
         ->setQueueTimeOutUrl($timeoutUrl)

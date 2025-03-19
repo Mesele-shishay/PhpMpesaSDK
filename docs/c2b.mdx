@@ -18,7 +18,7 @@ $config->setBaseUrl("https://apisandbox.safaricom.et")
 $mpesa = new Mpesa($config);
 
 // Register C2B URLs
-$result = $mpesa->c2b()
+$result = $mpesa
     ->setValidationUrl("https://your-domain.com/validate")
     ->setConfirmationUrl("https://your-domain.com/confirm")
     ->register();
@@ -30,7 +30,7 @@ if ($result->isSuccessful()) {
 }
 
 // Simulate C2B payment
-$simulation = $mpesa->c2b()
+$simulation = $mpesa
     ->setPhoneNumber("254712345678")
     ->setAmount(100.00)
     ->setBillReference("Bill123")
@@ -60,7 +60,7 @@ Before using C2B operations, ensure you have configured:
 Sets the validation URL for transaction validation.
 
 ```php
-$mpesa->c2b()->setValidationUrl("https://your-domain.com/validate");
+$mpesa->setValidationUrl("https://your-domain.com/validate");
 ```
 
 ### setConfirmationUrl(string $url)
@@ -68,7 +68,7 @@ $mpesa->c2b()->setValidationUrl("https://your-domain.com/validate");
 Sets the confirmation URL for transaction confirmations.
 
 ```php
-$mpesa->c2b()->setConfirmationUrl("https://your-domain.com/confirm");
+$mpesa->setConfirmationUrl("https://your-domain.com/confirm");
 ```
 
 ### register()
@@ -76,7 +76,7 @@ $mpesa->c2b()->setConfirmationUrl("https://your-domain.com/confirm");
 Registers the C2B URLs with M-Pesa.
 
 ```php
-$result = $mpesa->c2b()->register();
+$result = $mpesa->register();
 ```
 
 ### setPhoneNumber(string $phone)
@@ -84,7 +84,7 @@ $result = $mpesa->c2b()->register();
 Sets the customer's phone number for simulation.
 
 ```php
-$mpesa->c2b()->setPhoneNumber("254712345678");
+$mpesa->setPhoneNumber("254712345678");
 ```
 
 ### setAmount(float $amount)
@@ -92,7 +92,7 @@ $mpesa->c2b()->setPhoneNumber("254712345678");
 Sets the transaction amount for simulation.
 
 ```php
-$mpesa->c2b()->setAmount(100.00);
+$mpesa->setAmount(100.00);
 ```
 
 ### setBillReference(string $reference)
@@ -100,7 +100,7 @@ $mpesa->c2b()->setAmount(100.00);
 Sets the bill reference for simulation.
 
 ```php
-$mpesa->c2b()->setBillReference("Bill123");
+$mpesa->setBillReference("Bill123");
 ```
 
 ### setBillReferenceNumber(string $number)
@@ -108,7 +108,7 @@ $mpesa->c2b()->setBillReference("Bill123");
 Sets the bill reference number for simulation.
 
 ```php
-$mpesa->c2b()->setBillReferenceNumber("REF123");
+$mpesa->setBillReferenceNumber("REF123");
 ```
 
 ### simulate()
@@ -116,7 +116,7 @@ $mpesa->c2b()->setBillReferenceNumber("REF123");
 Simulates a C2B payment.
 
 ```php
-$result = $mpesa->c2b()->simulate();
+$result = $mpesa->simulate();
 ```
 
 ## Response Handling
