@@ -111,52 +111,6 @@ MPESA_RESULT_URL=https://your-domain.com/result
 MPESA_TIMEOUT_URL=https://your-domain.com/timeout
 ```
 
-## Advanced Configuration
-
-### 1. Custom Token Storage
-
-```php
-class CustomTokenStorage implements TokenStorageInterface {
-    public function saveToken($token, $expiresIn) {
-        // Store token securely
-    }
-
-    public function getToken() {
-        // Retrieve stored token
-    }
-
-    public function hasToken() {
-        // Check if token exists
-    }
-}
-
-$config->setTokenStorage(new CustomTokenStorage());
-```
-
-### 2. Custom HTTP Client
-
-```php
-class CustomHttpClient implements HttpClientInterface {
-    public function request($method, $url, $options = []) {
-        // Implement custom HTTP client
-    }
-}
-
-$config->setHttpClient(new CustomHttpClient());
-```
-
-### 3. Custom Authentication
-
-```php
-class CustomAuthentication implements AuthenticationInterface {
-    public function authenticate() {
-        // Implement custom authentication
-    }
-}
-
-$config->setAuthentication(new CustomAuthentication());
-```
-
 ## Configuration Validation
 
 ### Validating Configuration
@@ -181,18 +135,7 @@ try {
 
 ## Production Configuration
 
-### 1. Security Settings
-
-```php
-$config->setVerifySSL(true)
-    ->setHeaders([
-        'X-Request-ID' => uniqid(),
-        'X-Client-Version' => '1.0.0',
-        'X-Security-Token' => generateSecurityToken()
-    ]);
-```
-
-### 2. Performance Settings
+### 1. Performance Settings
 
 ```php
 $config->setTimeout(30)
@@ -200,7 +143,7 @@ $config->setTimeout(30)
     ->setRetryDelay(1000);  // milliseconds
 ```
 
-### 3. Monitoring Settings
+### 2. Monitoring Settings
 
 ```php
 $logger = new MpesaLogger();

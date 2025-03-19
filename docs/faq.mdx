@@ -71,7 +71,7 @@ The SDK automatically handles token expiration and refresh. You don't need to ma
 
 ```php
 try {
-    $result = $mpesa->stkPush();
+    $result = $mpesa->ussdPush();
     if (!$result->isSuccessful()) {
         // Handle failure
         echo "Error: " . $result->getErrorMessage();

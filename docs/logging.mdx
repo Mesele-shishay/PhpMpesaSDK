@@ -52,15 +52,6 @@ $logger->setLogFormat('json');  // Options: json, text, custom
 $logger->setLogPath('/path/to/logs/mpesa.log');
 ```
 
-### 4. Log Rotation
-
-```php
-// Configure log rotation
-$logger->setMaxFileSize(10485760)  // 10MB
-    ->setMaxFiles(5)
-    ->setRotationInterval('daily');
-```
-
 ## Logging Examples
 
 ### 1. API Request Logging
@@ -134,66 +125,6 @@ Method: POST
 Endpoint: /oauth/v1/generate
 Headers: {"Authorization": "Bearer ..."}
 Payload: {"grant_type": "client_credentials"}
-```
-
-## Production Logging
-
-### 1. Log Aggregation
-
-```php
-// Configure log aggregation
-$logger->setLogHandler(new ElasticsearchHandler([
-    'host' => 'elasticsearch.example.com',
-    'port' => 9200,
-    'index' => 'mpesa-logs'
-]));
-```
-
-### 2. Log Filtering
-
-```php
-// Filter sensitive data
-$logger->setLogFilter(function($data) {
-    // Remove sensitive information
-    unset($data['headers']['Authorization']);
-    unset($data['payload']['password']);
-    return $data;
-});
-```
-
-### 3. Log Monitoring
-
-```php
-// Set up log monitoring
-$logger->setAlertHandler(function($level, $message, $context) {
-    if ($level === 'error') {
-        // Send alert to monitoring service
-        sendAlert($message, $context);
-    }
-});
-```
-
-## Debugging
-
-### 1. Enable Debug Mode
-
-```php
-$logger->setLogLevel('debug')
-    ->setDebugMode(true);
-```
-
-### 2. Request/Response Logging
-
-```php
-// Log full request/response cycle
-$logger->setLogFullCycle(true);
-```
-
-### 3. Performance Logging
-
-```php
-// Log performance metrics
-$logger->setLogPerformance(true);
 ```
 
 ## Best Practices

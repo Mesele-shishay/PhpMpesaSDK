@@ -5,35 +5,77 @@ B2C (Business to Customer) operations allow you to send money from your business
 ## Basic Usage
 
 ```php
-use MesaSDK\PhpMpesa\Mpesa;
-use MesaSDK\PhpMpesa\Config;
 
+use MesaSDK\PhpMpesa\Config;
+use MesaSDK\PhpMpesa\Mpesa;
+use MesaSDK\PhpMpesa\Exceptions\MpesaException;
+
+// Load configuration from environment variables in production
 $config = new Config();
 $config->setBaseUrl("https://apisandbox.safaricom.et")
-    ->setConsumerKey("your_consumer_key")
-    ->setConsumerSecret("your_consumer_secret")
+    ->setConsumerKey("7oJ7uWPDp3jwqBzGvxQOn5g8s5rPwJ3qfXvsxwHyAknxAAxi")
+    ->setConsumerSecret("zEvvR7yTpNYG1DoH31MKOYOzh0iZ9kdXAK1andjjrqXdnJMTbiUMhnnz5Qf12oNC")
     ->setEnvironment('sandbox')
-    ->setShortCode("your_shortcode")
-    ->setInitiatorName("your_initiator_name")
-    ->setInitiatorPassword("your_initiator_password");
+    ->setVerifySSL(false);  // Note: Always use true in production
 
+// Initialize M-Pesa client
 $mpesa = new Mpesa($config);
 
-// Initiate B2C payment
-$result = $mpesa->b2c()
-    ->setPhoneNumber("254712345678")
-    ->setAmount(100.00)
-    ->setCallbackUrl("https://your-domain.com/callback")
-    ->setQueueTimeOutUrl("https://your-domain.com/timeout")
-    ->setResultUrl("https://your-domain.com/result")
-    ->setRemarks("Salary Payment")
-    ->setOccasion("Monthly Salary")
-    ->send();
+try {
+    // 1. Authenticate with M-Pesa API
+    $mpesa->authenticate();
 
-if ($result->isSuccessful()) {
-    echo "Transaction ID: " . $result->getTransactionID();
-} else {
-    echo "Error: " . $result->getErrorMessage();
+    // 2. Set up B2C payment parameters
+    $params = [
+        'initiatorName' => 'apitest',  // Your registered initiator name
+        'securityCredential' => 'lMhf0UqE4ydeEDwpUskmPgkNDZnA6NLi7z3T1TQuWCkH3/ScW8pRRnobq/AcwFvbC961+zDMgOEYGm8Oivb7L/7Y9ED3lhR7pJvnH8B1wYis5ifdeeWI6XE2NSq8X1Tc7QB9Dg8SlPEud3tgloB2DlT+JIv3ebIl/J/8ihGVrq499bt1pz/EA2nzkCtGeHRNbEDxkqkEnbioV0OM//0bv4K++XyV6jUFlIIgkDkmcK6aOU8mPBHs2um9aP+Y+nTJaa6uHDudRFg0+3G6gt1zRCPs8AYbts2IebseBGfZKv5K6Lqk9/W8657gEkrDZE8Mi78MVianqHdY/8d6D9KKhw==',
+        'commandId' => 'BusinessPayment',  // Options: SalaryPayment, BusinessPayment, PromotionPayment
+        'amount' => 10,
+        'partyA' => '1020',  // Your shortcode
+        'partyB' => '251700404709',  // Recipient phone number
+        'remarks' => 'Bonus payment',  // Payment description
+        'occasion' => 'StallOwner',  // Optional reference
+        'queueTimeOutURL' => 'https://testt.tugza.tech/',  // Timeout callback URL
+        'resultURL' => 'https://testt.tugza.tech/'  // Success callback URL
+    ];
+
+    // 3. Initiate the B2C payment using fluent interface
+    $result = $mpesa
+        ->setInitiatorName($params['initiatorName'])
+        ->setSecurityCredential($params['securityCredential'])
+        ->setCommandId($params['commandId'])
+        ->setAmount($params['amount'])
+        ->setPartyA($params['partyA'])
+        ->setPartyB($params['partyB'])
+        ->setRemarks($params['remarks'])
+        ->setOccasion($params['occasion'])
+        ->setQueueTimeOutUrl($params['queueTimeOutURL'])
+        ->setResultUrl($params['resultURL'])
+        ->b2c();
+
+    // 4. Handle the response
+    if ($result && $result->getResponseMessage()) {
+        echo "✅ B2C payment initiated successfully!\n";
+        echo "Response: \n";
+        print_r($result->getResponseMessage());
+
+        // Store these details in your database for reconciliation
+        // $conversationId = $result->getConversationId();
+        // $originatorConversationId = $result->getOriginatorConversationId();
+    }
+
+} catch (MpesaException $e) {
+    // Handle M-Pesa specific errors
+    echo "❌ M-Pesa Error:\n";
+    echo "Message: " . $e->getMessage() . "\n";
+    echo "Code: " . $e->getCode() . "\n";
+
+    // Log the error for debugging
+    error_log("M-Pesa B2C Error: " . $e->getMessage());
+} catch (Exception $e) {
+    // Handle unexpected errors
+    echo "❌ Unexpected Error: " . $e->getMessage() . "\n";
+    error_log("Unexpected B2C Error: " . $e->getMessage());
 }
 ```
 
@@ -54,7 +96,7 @@ Before using B2C operations, ensure you have configured:
 Sets the recipient's phone number.
 
 ```php
-$mpesa->b2c()->setPhoneNumber("254712345678");
+$mpesa->setPhoneNumber("254712345678");
 ```
 
 ### setAmount(float $amount)
@@ -62,7 +104,7 @@ $mpesa->b2c()->setPhoneNumber("254712345678");
 Sets the transaction amount.
 
 ```php
-$mpesa->b2c()->setAmount(1000.00);
+$mpesa->setAmount(1000.00);
 ```
 
 ### setCallbackUrl(string $url)
@@ -70,7 +112,7 @@ $mpesa->b2c()->setAmount(1000.00);
 Sets the callback URL for transaction notifications.
 
 ```php
-$mpesa->b2c()->setCallbackUrl("https://your-domain.com/callback");
+$mpesa->setCallbackUrl("https://your-domain.com/callback");
 ```
 
 ### setQueueTimeOutUrl(string $url)
@@ -78,7 +120,7 @@ $mpesa->b2c()->setCallbackUrl("https://your-domain.com/callback");
 Sets the queue timeout URL.
 
 ```php
-$mpesa->b2c()->setQueueTimeOutUrl("https://your-domain.com/timeout");
+$mpesa->setQueueTimeOutUrl("https://your-domain.com/timeout");
 ```
 
 ### setResultUrl(string $url)
@@ -86,7 +128,7 @@ $mpesa->b2c()->setQueueTimeOutUrl("https://your-domain.com/timeout");
 Sets the result URL.
 
 ```php
-$mpesa->b2c()->setResultUrl("https://your-domain.com/result");
+$mpesa->setResultUrl("https://your-domain.com/result");
 ```
 
 ### setRemarks(string $remarks)
@@ -94,7 +136,7 @@ $mpesa->b2c()->setResultUrl("https://your-domain.com/result");
 Sets transaction remarks.
 
 ```php
-$mpesa->b2c()->setRemarks("Salary Payment");
+$mpesa->setRemarks("Salary Payment");
 ```
 
 ### setOccasion(string $occasion)
@@ -102,7 +144,7 @@ $mpesa->b2c()->setRemarks("Salary Payment");
 Sets the transaction occasion.
 
 ```php
-$mpesa->b2c()->setOccasion("Monthly Salary");
+$mpesa->setOccasion("Monthly Salary");
 ```
 
 ### send()
@@ -110,7 +152,7 @@ $mpesa->b2c()->setOccasion("Monthly Salary");
 Initiates the B2C payment request.
 
 ```php
-$result = $mpesa->b2c()->send();
+$result = $mpesa->send();
 ```
 
 ## Response Handling

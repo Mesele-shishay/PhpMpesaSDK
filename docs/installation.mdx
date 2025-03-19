@@ -12,7 +12,7 @@
 1. Install the package via Composer:
 
 ```bash
-composer require mesasdk/php-mpesa
+composer require mesa/php-mpesa
 ```
 
 2. Configure your environment variables:
@@ -31,12 +31,11 @@ use MesaSDK\PhpMpesa\Config;
 use MesaSDK\PhpMpesa\Mpesa;
 
 $config = new Config();
-$config->setBaseUrl($_ENV['MPESA_BASE_URL'])
-    ->setConsumerKey($_ENV['MPESA_CONSUMER_KEY'])
-    ->setConsumerSecret($_ENV['MPESA_CONSUMER_SECRET'])
-    ->setEnvironment($_ENV['MPESA_ENVIRONMENT'])
+$config->setBaseUrl(getenv('MPESA_BASE_URL'))
+    ->setConsumerKey(getenv('MPESA_CONSUMER_KEY'))
+    ->setConsumerSecret(getenv('MPESA_CONSUMER_SECRET'))
+    ->setEnvironment(getenv('MPESA_ENVIRONMENT'))
     ->setVerifySSL(true);  // Always true in production
-
 
 $mpesa = new Mpesa($config);
 ```
@@ -46,8 +45,8 @@ $mpesa = new Mpesa($config);
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/Mesele-shishay/PhpMpesaSDK.git
-cd PhpMpesaSDK
+git clone https://github.com/your-username/php-mpesa.git
+cd php-mpesa
 ```
 
 2. Install dependencies:
@@ -73,7 +72,7 @@ $config->setVerifySSL(true);
 2. **Environment Variables**: Use environment variables for sensitive data:
 
 ```php
-$config->setConsumerKey($_ENV['MPESA_CONSUMER_KEY']);
+$config->setConsumerKey(getenv('MPESA_CONSUMER_KEY'));
 ```
 
 3. **Error Handling**: Implement proper error handling:
@@ -93,13 +92,9 @@ try {
 4. **Logging**: Configure logging for debugging and monitoring:
 
 ```php
-->setLoggingConfig([
-    'log_dir' => 'custom_logs',
-    'log_to_console' => true,
-    'min_log_level' => LogLevel::DEBUG,
-    'log_format' => '[%datetime%] [%level%] %message% %context%'
-    // max_file_size and max_files will use default values (null)
-]);
+$logger = new MpesaLogger();
+$logger->setLogPath('/path/to/logs');
+$mpesa->setLogger($logger);
 ```
 
 ## Troubleshooting
